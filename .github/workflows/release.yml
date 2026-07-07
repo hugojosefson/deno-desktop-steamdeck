@@ -18,6 +18,9 @@ jobs:
       - name: Build AppImage
         run: deno task build
 
+      - name: Rename artifact
+        run: rm -rf ./dist/hello && mv ./dist/hello.AppImage ./dist/hello && ls -la ./dist/hello
+
       - name: Generate release manifest
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -41,5 +44,5 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/hello.AppImage
+          files: dist/hello
           generate_release_notes: true

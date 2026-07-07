@@ -6,13 +6,13 @@ controller support.
 ## Quick start (on Steam Deck)
 
 ```sh
-curl -sL https://github.com/hugojosefson/deno-desktop-steamdeck/releases/latest/download/hello.AppImage -o hello.AppImage
-chmod +x hello.AppImage
-./hello.AppImage
+curl -sL https://github.com/hugojosefson/deno-desktop-steamdeck/releases/latest/download/hello -o hello
+chmod +x hello
+./hello
 ```
 
-To add as a non-Steam game in game mode: add `./hello.AppImage` as a non-Steam
-game via the Steam client.
+To add as a non-Steam game in game mode: add `./hello` as a non-Steam game via
+the Steam client.
 
 ## Usage (development)
 
