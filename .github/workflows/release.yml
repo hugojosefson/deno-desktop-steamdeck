@@ -18,8 +18,8 @@ jobs:
       - name: Build AppImage
         run: deno task build
 
-      - name: Rename artifact
-        run: rm -rf ./dist/hello && mv ./dist/hello.AppImage ./dist/hello && ls -la ./dist/hello
+      - name: Verify artifact
+        run: ls -la ./dist/hello
 
       - name: Generate release manifest
         run: |
