@@ -6,6 +6,7 @@
     "all": "deno fmt --check && deno lint && deno check main.ts"
   },
   "desktop": {
+    "backend": "cef",
     "release": {
       "baseUrl": "https://raw.githubusercontent.com/hugojosefson/deno-desktop-steamdeck/main/release/"
     }

@@ -36,3 +36,7 @@ releases publish AppImages to GitHub Releases.
 ## Requirements
 
 - [Deno](https://deno.com/) v2.9+
+
+## Backend
+
+Uses the CEF backend (bundled Chromium) — no system libraries needed.
