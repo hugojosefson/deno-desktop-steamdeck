@@ -1,7 +1,13 @@
 {
+  "version": "0.1.0",
   "tasks": {
     "dev": "deno desktop main.ts",
-    "build": "deno desktop --output hello.AppImage --target x86_64-unknown-linux-gnu main.ts",
+    "build": "deno desktop --allow-net --compress --output ./dist/hello.AppImage main.ts",
     "all": "deno fmt --check && deno lint && deno check main.ts"
+  },
+  "desktop": {
+    "release": {
+      "baseUrl": "https://raw.githubusercontent.com/hugojosefson/deno-desktop-steamdeck/main/release/"
+    }
   }
 }

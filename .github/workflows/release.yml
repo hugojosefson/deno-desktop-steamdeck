@@ -1,0 +1,45 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+
+      - name: Build AppImage
+        run: deno task build
+
+      - name: Generate release manifest
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          cat > release/latest.json <<EOF
+          {
+            "version": "$VERSION",
+            "patches": {}
+          }
+          EOF
+
+      - name: Commit updated manifest
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release/latest.json
+          git commit -m "chore: update release manifest to $GITHUB_REF_NAME" || true
+
+      - name: Push manifest
+        run: git push origin HEAD:main
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/hello.AppImage
+          generate_release_notes: true

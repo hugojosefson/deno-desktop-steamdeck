@@ -4,9 +4,9 @@
 /*.log
 .*.swp
 /coverage/
+/dist/
 *.AppImage
 deno-desktop-steamdeck*
 *.desktop
 .downloaded
-/hello/
 
