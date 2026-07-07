@@ -3,10 +3,23 @@
   "tasks": {
     "dev": "deno desktop main.ts",
     "build": "rm -rf dist/ && deno desktop --allow-net --output ./dist/hello.AppImage main.ts && rm -rf ./dist/hello && mv ./dist/hello.AppImage ./dist/hello",
-    "all": "deno fmt --check && deno lint && deno check main.ts"
+    "all": "deno fmt --check && deno lint && deno check"
   },
   "desktop": {
+    "app": {
+      "name": "Hello Steam Deck",
+      "identifier": "com.hugojosefson.hello-steamdeck",
+      "icons": {
+        "linux": [
+          { "path": "./icons/256.png", "size": 256 },
+          { "path": "./icons/512.png", "size": 512 }
+        ]
+      }
+    },
     "backend": "cef",
+    "output": {
+      "linux": "./dist/hello"
+    },
     "release": {
       "baseUrl": "https://raw.githubusercontent.com/hugojosefson/deno-desktop-steamdeck/main/release/"
     }
