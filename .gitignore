@@ -4,4 +4,8 @@
 /*.log
 .*.swp
 /coverage/
+*.AppImage
+deno-desktop-steamdeck*
+*.desktop
+.downloaded
 
