@@ -3,7 +3,18 @@
 Minimal Deno Desktop hello-world app for Steam Deck, with auto-update and
 controller support.
 
-## Usage
+## Quick start (on Steam Deck)
+
+```sh
+curl -sL https://github.com/hugojosefson/deno-desktop-steamdeck/releases/latest/download/hello.AppImage -o hello.AppImage
+chmod +x hello.AppImage
+./hello.AppImage
+```
+
+To add as a non-Steam game in game mode: add `./hello.AppImage` as a non-Steam
+game via the Steam client.
+
+## Usage (development)
 
 ```sh
 # Run in development
