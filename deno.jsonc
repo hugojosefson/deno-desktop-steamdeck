@@ -2,7 +2,7 @@
   "version": "0.1.0",
   "tasks": {
     "dev": "deno desktop main.ts",
-    "build": "rm -rf dist/ && deno desktop --compress --output ./dist/hello.AppImage main.ts && rm -rf ./dist/hello && mv ./dist/hello.AppImage ./dist/hello",
+    "build": "rm -rf dist/ && deno desktop --allow-net --compress --output ./dist/hello.AppImage main.ts && rm -rf ./dist/hello && mv ./dist/hello.AppImage ./dist/hello",
     "all": "deno fmt --check && deno lint && deno check main.ts"
   },
   "desktop": {

@@ -4,8 +4,37 @@ const appVersion = Deno.desktopVersion || "0.0.0";
 // @ts-ignore Deno Desktop API
 Deno.autoUpdate({ interval: 60 * 60 * 1000 });
 
-Deno.serve(() =>
-  new Response(
+function cmpVer(a: string, b: string): number {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    if (pa[i] > pb[i]) return 1;
+    if (pa[i] < pb[i]) return -1;
+  }
+  return 0;
+}
+
+const RELEASE_BASE =
+  "https://raw.githubusercontent.com/hugojosefson/deno-desktop-steamdeck/main/release/";
+
+Deno.serve(async (req) => {
+  const url = new URL(req.url);
+
+  if (url.pathname === "/check-update") {
+    try {
+      const res = await fetch(RELEASE_BASE + "latest.json");
+      const manifest = await res.json();
+      const hasUpdate = cmpVer(manifest.version, appVersion) > 0;
+      return Response.json({
+        status: hasUpdate ? "available" : "uptodate",
+        version: manifest.version,
+      });
+    } catch (e) {
+      return Response.json({ status: "error", message: String(e) });
+    }
+  }
+
+  return new Response(
     `<!DOCTYPE html>
 <html>
 <head>
@@ -14,7 +43,10 @@ Deno.serve(() =>
   body{margin:0;height:100vh;display:grid;place-items:center;background:#111;color:#eee;font-family:system-ui,sans-serif;text-align:center}
   h1{font-size:3rem;margin:0}
   p{font-size:1.2rem;color:#888}
-  #version{font-size:.8rem;color:#444;margin-top:3rem}
+  button{font-size:1rem;padding:.5em 1em;background:#333;color:#eee;border:1px solid #555;border-radius:4px;cursor:pointer;margin-top:1rem}
+  button:hover{background:#444}
+  #update-status{font-size:.9rem;margin-top:1rem}
+  #version{font-size:.8rem;color:#444;margin-top:2rem}
   #feedback{font-size:.9rem;color:#666;margin-top:1rem}
 </style>
 <script>
@@ -24,17 +56,27 @@ Deno.serve(() =>
   if(v)v.textContent="${"v" + appVersion}";
   function poll(){requestAnimationFrame(()=>{for(const gp of navigator.getGamepads()){if(gp&&gp.buttons[0]?.pressed){document.getElementById("feedback").textContent="A button pressed!"}};poll()})}
   addEventListener("gamepadconnected",poll);
+  async function checkUpdate(){
+    const s=document.getElementById("update-status");
+    s.textContent="Checking...";
+    try{
+      const r=await(await fetch("/check-update")).json();
+      s.textContent=r.status==="available"?"Update v"+r.version+" available! Restart to apply":r.status==="uptodate"?"Up to date":"Error: "+r.message;
+    }catch(e){s.textContent="Error: "+e.message}
+  }
 </script>
 </head>
 <body>
 <div>
   <h1>Hello Steam Deck!</h1>
   <p>Press B or Escape to close</p>
+  <button onclick="checkUpdate()">Check for updates</button>
+  <p id="update-status"></p>
   <p id="feedback"></p>
   <p id="version"></p>
 </div>
 </body>
 </html>`,
     { headers: { "content-type": "text/html" } },
-  )
-);
+  );
+});
