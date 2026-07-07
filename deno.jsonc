@@ -2,7 +2,7 @@
   "version": "0.1.0",
   "tasks": {
     "dev": "deno desktop main.ts",
-    "build": "rm -rf dist/ && deno desktop --allow-net --output ./dist/hello.AppImage main.ts && rm -rf ./dist/hello && mv ./dist/hello.AppImage ./dist/hello",
+    "build": "rm -rf dist/ && deno desktop --allow-net --backend=$(deno eval 'import{parse}from \"@std/jsonc\";console.log(parse(Deno.readTextFileSync(\"deno.jsonc\")).desktop.backend)') --output ./dist/hello.AppImage main.ts && rm -rf ./dist/hello && mv ./dist/hello.AppImage ./dist/hello",
     "all": "deno fmt --check && deno lint && deno check"
   },
   "desktop": {
@@ -23,5 +23,8 @@
     "release": {
       "baseUrl": "https://raw.githubusercontent.com/hugojosefson/deno-desktop-steamdeck/main/release/"
     }
+  },
+  "imports": {
+    "@std/jsonc": "jsr:@std/jsonc@^1.0.2"
   }
 }
