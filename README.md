@@ -17,9 +17,6 @@ the Steam client.
 ## Usage (development)
 
 ```sh
-# Run in development
-deno task dev
-
 # Build AppImage for Steam Deck
 deno task build
 
