@@ -47,7 +47,7 @@ async function initSteamDeck(): Promise<void> {
   }
 }
 
-initSteamDeck();
+await initSteamDeck();
 
 function cmpVer(a: string, b: string): number {
   const pa = a.split(".").map(Number);
