@@ -171,7 +171,7 @@ function shortcutNeedsUpdate(
   );
 }
 
-function computeAppId(appName: string): number {
+export function computeAppId(appName: string): number {
   const hash = polycrc.crc32(appName);
   return (hash >>> 0) | 0x80000000;
 }
@@ -311,7 +311,7 @@ async function addSteamShortcut(
   return shortcutKey;
 }
 
-async function switchToGameMode(
+export async function switchToGameMode(
   appId: number,
 ): Promise<{ switched: boolean; appId: number }> {
   await log("info", "switchToGameMode: killing existing steam", { appId });
@@ -347,17 +347,10 @@ async function switchToGameMode(
   }
 }
 
-interface SteamDeckResult {
-  added: boolean;
-  switched: boolean;
-  switchFailed: boolean;
-  needsRelaunch: boolean;
-}
-
 export async function ensureSteamDeckIntegration(
   exePath: string,
   iconPath: string | null,
-): Promise<SteamDeckResult> {
+): Promise<boolean> {
   await log("info", "ensureSteamDeckIntegration: start", { exePath, iconPath });
 
   const steamOs = await isSteamOS();
@@ -366,16 +359,10 @@ export async function ensureSteamDeckIntegration(
   });
   if (!steamOs) {
     await log("info", "ensureSteamDeckIntegration: not SteamOS, skipping");
-    return {
-      added: false,
-      switched: false,
-      switchFailed: false,
-      needsRelaunch: false,
-    };
+    return false;
   }
 
   const appDir = exePath.substring(0, exePath.lastIndexOf("/"));
-  await log("info", "ensureSteamDeckIntegration: appDir", { appDir });
   const shortcutKey = await addSteamShortcut(
     APP_NAME,
     exePath,
@@ -386,52 +373,7 @@ export async function ensureSteamDeckIntegration(
     shortcutKey,
   });
 
-  if (shortcutKey === null) {
-    await log(
-      "info",
-      "ensureSteamDeckIntegration: shortcut not added, stopping",
-    );
-    return {
-      added: false,
-      switched: false,
-      switchFailed: false,
-      needsRelaunch: false,
-    };
-  }
-
-  const appId = computeAppId(APP_NAME);
-  await log("info", "ensureSteamDeckIntegration: appId computed", { appId });
-
-  const gameMode = isInGameMode();
-  const launchedBySteam = isLaunchedBySteam();
-  await log("info", "ensureSteamDeckIntegration: mode check", {
-    gameMode,
-    launchedBySteam,
-  });
-
-  if (gameMode || launchedBySteam) {
-    await log(
-      "info",
-      "ensureSteamDeckIntegration: already in game mode or launched by steam, no switch needed",
-    );
-    return {
-      added: true,
-      switched: false,
-      switchFailed: false,
-      needsRelaunch: false,
-    };
-  }
-
-  const switchResult = await switchToGameMode(appId);
-  await log("info", "ensureSteamDeckIntegration: switchToGameMode result", {
-    switched: switchResult.switched,
-  });
-  return {
-    added: true,
-    switched: switchResult.switched,
-    switchFailed: !switchResult.switched,
-    needsRelaunch: switchResult.switched,
-  };
+  return shortcutKey !== null;
 }
 
 export { isInGameMode, isLaunchedBySteam, isSteamOS };
