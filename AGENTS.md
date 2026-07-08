@@ -2,12 +2,16 @@
 
 ## Git workflow
 
-- Always `git pull --rebase origin main` before tagging and pushing
-- Run `deno task all` before every commit
-- Commit, tag, and push as a complete workflow:
-  1. `git add . && git commit -m "type: message"`
-  2. `git tag -a vX.Y.Z -m "tag message"`
-  3. `git push origin main --tags`
+Complete workflow for every change:
+
+1. **Pull and rebase**: `git pull --rebase origin main` before any work
+2. **Validate**: run `deno task all` before every commit
+3. **Commit**: `git add . && git commit -m "type: message"` (use conventional
+   commits)
+4. **Tag**: `git tag -a vX.Y.Z -m "tag message"` (use semver, never delete tags)
+5. **Push**: `git push origin main --tags`
+6. **Handle rejections**: if push fails, run `git pull --rebase origin main`
+   then retry push
 
 ## Deno permissions
 
