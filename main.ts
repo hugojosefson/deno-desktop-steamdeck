@@ -1,23 +1,27 @@
 // @ts-ignore Deno Desktop API
 const appVersion = Deno.desktopVersion || "0.0.0";
 
-// @ts-ignore Deno Desktop API
-Deno.autoUpdate({ interval: 60 * 60 * 1000 });
-
 import { ensureSteamDeckIntegration } from "./steam-deck.ts";
 
-const exePath = Deno.execPath();
-const appDir = exePath.substring(0, exePath.lastIndexOf("/"));
-const iconPath = `${appDir}/icons/512.png`;
+let shouldSkipMainServer = false;
 
-async function initSteamDeck(): Promise<boolean> {
+try {
+  // @ts-ignore Deno Desktop API
+  Deno.autoUpdate({ interval: 60 * 60 * 1000 });
+} catch (e) {
+  console.error("autoUpdate failed:", e);
+}
+
+try {
+  const exePath = Deno.execPath();
+  const appDir = exePath.substring(0, exePath.lastIndexOf("/"));
+  const iconPath = `${appDir}/icons/512.png`;
+
   const result = await ensureSteamDeckIntegration(exePath, iconPath);
 
   if (result.needsRelaunch) {
-    return true;
-  }
-
-  if (result.added && !result.switched) {
+    shouldSkipMainServer = true;
+  } else if (result.added && !result.switched) {
     const popupHtml = `<!DOCTYPE html>
 <html>
 <head>
@@ -44,13 +48,11 @@ async function initSteamDeck(): Promise<boolean> {
     Deno.serve(() =>
       new Response(popupHtml, { headers: { "content-type": "text/html" } })
     );
-    return true;
+    shouldSkipMainServer = true;
   }
-
-  return false;
+} catch (e) {
+  console.error("Steam Deck integration failed:", e);
 }
-
-const shouldSkipMainServer = await initSteamDeck();
 
 function cmpVer(a: string, b: string): number {
   const pa = a.split(".").map(Number);
