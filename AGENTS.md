@@ -83,6 +83,13 @@ Files NOT to commit (local-only build artifacts):
 
 - Write new rules, conventions, and learnings to AGENTS.md as they arise
 
+## Token and tool efficiency
+
+- Use `gh run view <id> --json status,conclusion` (single line JSON) instead of
+  `gh run watch` to avoid verbose loop output
+- Prefer one-shot checks over polling loops
+- Batch independent operations into parallel tool calls
+
 ## Code style
 
 - Run `deno fmt` before committing
