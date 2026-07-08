@@ -78,6 +78,14 @@ Files NOT to commit (local-only build artifacts):
   `git pull --rebase origin main` to fetch the correct tag from origin (use
   `git fetch origin --prune` to ensure you actually get the remote tags)
 
+## Future improvements
+
+- **Move patches to release assets**: bsdiff patches are currently stored in the
+  repo (`release/patch-*.bin`) and served via `raw.githubusercontent.com`.
+  Ideally they should be uploaded as GitHub Release assets and referenced by
+  download URL in `latest.json`, so they don't depend on files staying in the
+  repo. Implement once the auto-update system is verified working end-to-end.
+
 ## Agent maintenance
 
 - Write new rules, conventions, and learnings to AGENTS.md as they arise
