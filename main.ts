@@ -562,7 +562,7 @@ if (!shouldSkipMainServer) {
         if(f.okExists)parts.push("ok");
         if(parts.length)lines.push("["+f.dylib+"] "+parts.join("+"));
       }
-      s.textContent=lines.join("\n");
+      s.textContent=lines.join("\\n");
       s.style.whiteSpace="pre-wrap";
     }catch(e){s.textContent="Error: "+e.message}
   }
