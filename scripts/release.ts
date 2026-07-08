@@ -47,7 +47,22 @@ async function main() {
     }`,
   );
 
-  // Build
+  // Generate env + clean
+  const genEnv = new Deno.Command("deno", {
+    args: [
+      "run",
+      "--allow-read",
+      "--allow-write",
+      "--allow-env",
+      `${ROOT}/scripts/build-env.ts`,
+    ],
+    cwd: ROOT,
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+  const genStatus = await genEnv.output();
+  if (!genStatus.success) Deno.exit(1);
+
   await Deno.remove(DIST_DIR, { recursive: true }).catch(() => {});
   const build = new Deno.Command("deno", {
     args: [
