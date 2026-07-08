@@ -89,11 +89,11 @@ To check incoming logs in OpenObserve:
 
 ```bash
 cd /surviving-data/code/current/i/deno-desktop-steamdeck
-source <(rg '^OPENOBSERVE_' .env.admin | sed 's/^/export /')
+source <(rg '^OPENOBSERVE_SEARCH_' .env.admin | sed 's/^/export /')
 python3 -c "
 import urllib.request, json, base64, time
 url = 'https://openobserve.hugojosefson.net'
-email = '${OPENOBSERVE_USER}'
+email = '${OPENOBSERVE_SEARCH_USER}'
 token = '${OPENOBSERVE_SEARCH_TOKEN}'
 auth = base64.b64encode(f'{email}:{token}'.encode()).decode()
 req = urllib.request.Request(url + '/api/default/_search', method='POST')
