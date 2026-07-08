@@ -8,7 +8,9 @@ Complete workflow for every change:
 2. **Validate**: run `deno task all` before every commit
 3. **Commit**: `git add . && git commit -m "type: message"` (use conventional
    commits)
-4. **Tag**: `git tag -a vX.Y.Z -m "tag message"` (use semver, never delete tags)
+4. **Tag**: do a fresh `git pull --rebase origin main` to check for new tags
+   from origin, then create tag with next semver version using
+   `git tag -a vX.Y.Z -m "tag message"` (never delete tags)
 5. **Push**: `git push origin main --tags`
 6. **Handle rejections**: if push fails, run `git pull --rebase origin main`,
    check if a new tag was received from origin, and create a new tag if needed
