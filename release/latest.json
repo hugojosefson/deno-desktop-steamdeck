@@ -1,9 +1,4 @@
 {
   "version": "0.3.19",
-  "patches": {
-    "0.3.18": {
-      "name": "patch-0.3.18-to-0.3.19.bin",
-      "sha256": "8a2943895e0abb5d02cfe4ccf1a57966e2a07d6fe2985c2c5df93792e3828d2a"
-    }
-  }
+  "patches": {}
 }
