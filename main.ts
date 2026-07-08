@@ -195,7 +195,7 @@ if (!shouldSkipMainServer) {
           "Content-Type": "application/json",
           "Authorization": "Basic " + btoa(":${OPENOBSERVE_TOKEN}")
         },
-        body: JSON.stringify([{timestamp: new Date().toISOString(), level: lvl, message: msg, ...data}])
+        body: JSON.stringify([Object.assign({timestamp: new Date().toISOString(), level: lvl, message: msg}, data || {})])
       }).catch(() => {});
     } catch(e) {}
   };
@@ -216,16 +216,20 @@ if (!shouldSkipMainServer) {
     window.addEventListener("unhandledrejection", function(e) {
       _OO_LOG("error", "unhandled rejection", {reason: String(e.reason), stack: e.reason?.stack || ""});
     });
-    if (window.OO_RUM) {
-      OO_RUM.init({
-        applicationId: "com.hugojosefson.hello-steamdeck",
-        clientToken: "${OPENOBSERVE_TOKEN}",
-        site: "${OPENOBSERVE_URL}",
-        service: "hello-steamdeck",
-        env: "production",
-        version: "${"v" + appVersion}",
-        sessionSampleRate: 100,
-      });
+    try {
+      if (window.OO_RUM) {
+        OO_RUM.init({
+          applicationId: "com.hugojosefson.hello-steamdeck",
+          clientToken: "${OPENOBSERVE_TOKEN}",
+          site: "${new URL(OPENOBSERVE_URL).host}",
+          service: "hello-steamdeck",
+          env: "production",
+          version: "${"v" + appVersion}",
+          sessionSampleRate: 100,
+        });
+      }
+    } catch(e) {
+      console.error("OO_RUM init error:", e);
     }
   })();
 </script>
