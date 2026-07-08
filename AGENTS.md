@@ -12,7 +12,8 @@
 ## Deno permissions
 
 - Never add deno permissions without explicit user permission
-- Be specific with permissions (e.g., `--allow-run=steamosctl`, not `--allow-run`)
+- Be specific with permissions (e.g., `--allow-run=steamosctl`, not
+  `--allow-run`)
 - Avoid blanket permissions like `--allow-all`
 - Set deno permissions in the build task of `deno.jsonc` for Deno Desktop apps
 
@@ -22,6 +23,11 @@
 - Major version (X): breaking changes
 - Minor version (Y): new features
 - Patch version (Z): bug fixes
+- Never delete tags - create next tag instead
+
+## Agent maintenance
+
+- Write new rules, conventions, and learnings to AGENTS.md as they arise
 
 ## Code style
 
