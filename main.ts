@@ -10,11 +10,11 @@ const exePath = Deno.execPath();
 const appDir = exePath.substring(0, exePath.lastIndexOf("/"));
 const iconPath = `${appDir}/icons/512.png`;
 
-async function initSteamDeck(): Promise<void> {
+async function initSteamDeck(): Promise<boolean> {
   const result = await ensureSteamDeckIntegration(exePath, iconPath);
 
   if (result.needsRelaunch) {
-    Deno.exit(0);
+    return true;
   }
 
   if (result.added && !result.switched) {
@@ -44,10 +44,16 @@ async function initSteamDeck(): Promise<void> {
     Deno.serve(() =>
       new Response(popupHtml, { headers: { "content-type": "text/html" } })
     );
+    return true;
   }
+
+  return false;
 }
 
-await initSteamDeck();
+if (await initSteamDeck()) {
+  // Wait for server to finish (it won't until killed)
+  await new Promise(() => {});
+}
 
 function cmpVer(a: string, b: string): number {
   const pa = a.split(".").map(Number);
