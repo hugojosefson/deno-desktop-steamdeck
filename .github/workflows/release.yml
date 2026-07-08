@@ -24,15 +24,14 @@ jobs:
       - name: Verify artifact
         run: ls -la ./dist/hello
 
-      - name: Generate release manifest
+      - name: Update release manifest version
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          cat > release/latest.json <<EOF
-          {
-            "version": "$VERSION",
-            "patches": {}
-          }
-          EOF
+          deno eval "
+            const j = JSON.parse(Deno.readTextFileSync('release/latest.json'));
+            j.version = '$VERSION';
+            Deno.writeTextFileSync('release/latest.json', JSON.stringify(j, null, 2) + '\n');
+          "
 
       - name: Commit updated manifest
         run: |

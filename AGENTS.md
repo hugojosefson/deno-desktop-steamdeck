@@ -25,6 +25,24 @@ Complete workflow for every change:
    check if a new tag was received from origin (`git fetch origin --prune`), and
    create a new tag if needed before retrying push
 
+After pushing a `v*` tag, the **release.yml** GitHub Actions workflow
+automatically rebuilds the AppImage in CI, bumps the `version` in
+`release/latest.json` while preserving patches, commits that bump to `main`, and
+creates a GitHub Release with the AppImage artifact.
+
+### GitHub Actions workflows
+
+There are CI/CD workflows in `.github/workflows/`:
+
+- **release.yml** — triggers on `v*` tag push; builds the AppImage via
+  `deno task build`, bumps the `version` field in `release/latest.json` via
+  `deno eval` (preserving existing patches), commits the bump to `main`, and
+  creates a GitHub Release with the AppImage artifact.
+- **ci.yml** — runs `deno task all` on non-`main` branches and PRs.
+
+Note: the glob tool may not find these files since they're inside a `.github/`
+directory.
+
 ### Release file checklist
 
 Files to commit after a release:
