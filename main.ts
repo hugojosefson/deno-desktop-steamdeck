@@ -287,7 +287,7 @@ if (!shouldSkipMainServer) {
   addEventListener("gamepadconnected",()=>{document.getElementById("feedback").textContent="Controller connected"});
   const v=document.getElementById("version");
   if(v)v.textContent="${"v" + appVersion}";
-  function poll(){requestAnimationFrame(()=>{for(const gp of navigator.getGamepads()){if(gp&&gp.buttons[0]?.pressed){document.getElementById("feedback").textContent="A button pressed!"}};poll()})}
+  function poll(){requestAnimationFrame(()=>{for(const gp of navigator.getGamepads()){if(!gp)continue;if(gp.buttons[0]?.pressed){document.getElementById("feedback").textContent="A button pressed!"}if(gp.buttons[1]?.pressed){window.close()}};poll()})}
   addEventListener("gamepadconnected",poll);
   async function checkUpdate(){
     const s=document.getElementById("update-status");
