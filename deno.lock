@@ -4,6 +4,8 @@
     "jsr:@std/json@^1.0.2": "1.0.3",
     "jsr:@std/jsonc@^1.0.2": "1.0.2",
     "npm:buffer@^6.0.3": "6.0.3",
+    "npm:node-bsdiff@*": "0.2.1",
+    "npm:node-bsdiff@~0.2.1": "0.2.1",
     "npm:steam-binary-vdf@0.1": "0.1.0"
   },
   "jsr": {
@@ -55,6 +57,21 @@
     "ieee754@1.2.1": {
       "integrity": "sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA=="
     },
+    "node-addon-api@8.9.0": {
+      "integrity": "sha512-ekZMeaaIzSQTSpr7X2X3iJM7lTzgnx8ahAG9pJfT/7+14mlEM8ZYQ9cgCDvSSRbReFK0oHli3WrZdCiRsgAT9Q=="
+    },
+    "node-bsdiff@0.2.1": {
+      "integrity": "sha512-WK9zF1mC8uyEeSuFt8xGOTI2MjkjsKuaPqxR29rpl8IdCG9cZECu+ibZjk4+rWDROwRfif89duzRc3ifsciFew==",
+      "dependencies": [
+        "node-addon-api",
+        "node-gyp-build"
+      ],
+      "scripts": true
+    },
+    "node-gyp-build@4.8.4": {
+      "integrity": "sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==",
+      "bin": true
+    },
     "node-int64@0.4.0": {
       "integrity": "sha512-O5lz91xSOeoXP6DulyHfllpq+Eg00MWitZIbtPfoSEvqIHdl5gfcY6hYzDWnj0qD5tz52PI08u9qUvSVeUBeHw=="
     },
@@ -80,6 +97,7 @@
     "dependencies": [
       "jsr:@std/jsonc@^1.0.2",
       "npm:buffer@^6.0.3",
+      "npm:node-bsdiff@~0.2.1",
       "npm:steam-binary-vdf@0.1"
     ]
   }

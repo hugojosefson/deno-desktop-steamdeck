@@ -1,22 +1,42 @@
 # Agent instructions
 
-## Git workflow
+## Git and release workflow
 
 Complete workflow for every change:
 
 1. **Pull and rebase with tags**: `git pull --rebase origin main` and
    `git fetch origin --prune` before any work
-2. **Validate**: run `deno task all` before every commit
-3. **Commit**: `git add . && git commit -m "type: message"` (use conventional
+2. **Bump version**: update `version` in `deno.jsonc` to match planned tag
+   (e.g. `0.3.19` for `v0.3.19`)
+3. **Release build**: run `PREV_VERSION=<previous> deno task release` to build
+   the AppImage, generate a bsdiff patch from the previous version's runtime
+   dylib, and update `release/latest.json`. The previous version is the
+   `Deno.desktopVersion` value baked into the last release (e.g. `0.3.18`).
+   The previous runtime dylib must be present at `release/libdenort.so`.
+4. **Validate**: run `deno task all` before every commit
+5. **Commit**: `git add . && git commit -m "type: message"` (use conventional
    commits)
-4. **Tag**: do a fresh `git pull --rebase origin main` to check for new tags
+6. **Tag**: do a fresh `git pull --rebase origin main` to check for new tags
    from origin (use `git fetch origin --prune` to actually fetch them), then
    create tag with next semver version using
    `git tag -a vX.Y.Z -m "tag message"` (never delete tags)
-5. **Push**: `git push origin main --tags`
-6. **Handle rejections**: if push fails, run `git pull --rebase origin main`,
+7. **Push**: `git push origin main --tags`
+8. **Handle rejections**: if push fails, run `git pull --rebase origin main`,
    check if a new tag was received from origin (`git fetch origin --prune`), and
    create a new tag if needed before retrying push
+
+### Release file checklist
+
+Files to commit after a release:
+- `deno.jsonc` (bumped version)
+- `release/latest.json` (updated version + patch entry)
+- `release/patch-<old>-to-<new>.bin` (new patch)
+- `scripts/release.ts` (if changed)
+- `deno.lock` (if changed)
+
+Files NOT to commit (local-only build artifacts):
+- `release/libdenort.so` (85MB baseline dylib, kept locally for next patch)
+- `dist/` (build output, gitignored)
 
 ## Deno permissions
 

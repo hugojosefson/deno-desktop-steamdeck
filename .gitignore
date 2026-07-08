@@ -12,4 +12,5 @@ deno-desktop-steamdeck*
 .env
 .env.*
 /generated/
+/release/libdenort.so
 
