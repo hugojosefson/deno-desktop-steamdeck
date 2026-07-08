@@ -31,7 +31,7 @@ const spinnerHtml = `<!DOCTYPE html>
   p{color:#666;font-size:.9rem}
 </style>
 </head>
-<body><div><div class="sp"></div><p id="s">Starting...</p></div></body>
+<body><div><div class="sp"></div><p id="s">Starting v${appVersion}...</p></div></body>
 </html>`;
 let win: { navigate: (url: string) => void } | null = null;
 try {
@@ -179,7 +179,7 @@ try {
   p{color:#888;font-size:1rem}
 </style>
 </head>
-<body><div><div class="sp"></div><p>Switching to game mode...</p></div></body>
+<body><div><div class="sp"></div><p>Switching to game mode v${appVersion}...</p></div></body>
 </html>`;
     shouldSkipMainServer = true;
     // Don't hold process open — game mode switch is underway
