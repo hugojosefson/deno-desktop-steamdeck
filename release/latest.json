@@ -3,7 +3,7 @@
   "patches": {
     "0.3.19": {
       "name": "patch-0.3.19-to-0.3.20.bin",
-      "sha256": "f7ad5ff713aa7f2f75ecbf779cf1f96d6ed78da756323b2623d4de368f4191ee"
+      "sha256": "e3fb48de9a910a00b51b091d805bb6f16f6a28cb5b8bbae9bbd448fe4a9c80fd"
     },
     "0.3.18": {
       "name": "patch-0.3.18-to-0.3.19.bin",

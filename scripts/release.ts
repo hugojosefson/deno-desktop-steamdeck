@@ -122,9 +122,16 @@ async function main() {
     console.error("release: no previous libdenort.so found, skipping patch");
   }
 
-  // Update latest.json
+  // Update latest.json — preserve existing patches, add new one
   const latestJsonPath = `${RELEASE_DIR}/latest.json`;
-  const latestJson = { version, patches };
+  let existing: { version?: string; patches?: Record<string, unknown> } = {};
+  try {
+    existing = JSON.parse(await Deno.readTextFile(latestJsonPath));
+  } catch {
+    // no existing file, start fresh
+  }
+  const merged = { ...existing.patches, ...patches };
+  const latestJson = { version, patches: merged };
   await Deno.writeTextFile(
     latestJsonPath,
     JSON.stringify(latestJson, null, 2) + "\n",
