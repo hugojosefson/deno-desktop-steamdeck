@@ -1,5 +1,6 @@
 import { Buffer } from "buffer";
 import { readVdf, writeVdf } from "steam-binary-vdf";
+import polycrc from "polycrc";
 import { log } from "./lib/log.ts";
 
 const APP_NAME = "Hello Steam Deck";
@@ -170,12 +171,17 @@ function shortcutNeedsUpdate(
   );
 }
 
+function computeAppId(appName: string): number {
+  const hash = polycrc.crc32(appName);
+  return (hash >>> 0) | 0x80000000;
+}
+
 async function addSteamShortcut(
   appName: string,
   exePath: string,
   iconPath: string | null,
   startDir: string,
-): Promise<boolean> {
+): Promise<string | null> {
   await log("info", "addSteamShortcut: start", {
     appName,
     exePath,
@@ -185,15 +191,15 @@ async function addSteamShortcut(
   const steamDir = findSteamDir();
   await log("info", "addSteamShortcut: steamDir", { steamDir });
   if (!steamDir) {
-    await log("info", "addSteamShortcut: false (no steam dir)");
-    return false;
+    await log("info", "addSteamShortcut: null (no steam dir)");
+    return null;
   }
 
   const userId = findSteamUserId(steamDir);
   await log("info", "addSteamShortcut: userId", { userId });
   if (!userId) {
-    await log("info", "addSteamShortcut: false (no userId)");
-    return false;
+    await log("info", "addSteamShortcut: null (no userId)");
+    return null;
   }
 
   const vdfPath = getShortcutsVdfPath(steamDir, userId);
@@ -201,6 +207,7 @@ async function addSteamShortcut(
   await log("info", "addSteamShortcut: paths", { vdfPath, configDir });
 
   let data: Record<string, unknown>;
+  let shortcutKey: string | null = null;
 
   try {
     const raw = await Deno.readFile(vdfPath);
@@ -245,7 +252,8 @@ async function addSteamShortcut(
     });
     if (!needsUpdate) {
       await log("info", "addSteamShortcut: shortcut up to date");
-      return true;
+      shortcutKey = key;
+      return key;
     }
     shortcuts[key] = {
       AppName: appName,
@@ -264,9 +272,11 @@ async function addSteamShortcut(
       tags: {},
     };
     await log("info", "addSteamShortcut: updated existing shortcut", { key });
+    shortcutKey = key;
   } else {
     const idx = getNextShortcutIndex(shortcuts);
     await log("info", "addSteamShortcut: creating new shortcut", { idx });
+    shortcutKey = idx;
     shortcuts[idx] = {
       AppName: appName,
       exe: `"${exePath}"`,
@@ -297,25 +307,57 @@ async function addSteamShortcut(
   // @ts-ignore VdfMap type compatibility
   const outBuf = writeVdf(data);
   await Deno.writeFile(vdfPath, outBuf);
-  await log("info", "addSteamShortcut: wrote vdf, returning true");
-  return true;
+  await log("info", "addSteamShortcut: wrote vdf, returning key");
+  return shortcutKey;
 }
 
-async function switchToGameMode(): Promise<boolean> {
-  await log("info", "switchToGameMode: calling steamosctl switch-to-game-mode");
+async function switchToGameMode(
+  appId: number,
+): Promise<{ switched: boolean; appId: number }> {
+  await log("info", "switchToGameMode: stopping steam clients", { appId });
   try {
-    const p = new Deno.Command("steamosctl", {
-      args: ["switch-to-game-mode"],
+    await new Deno.Command("pkill", {
+      args: ["-f", "steamwebhelper"],
+    }).spawn().status.catch(() => {});
+    await new Deno.Command("pkill", {
+      args: ["-f", "steam"],
+    }).spawn().status.catch(() => {});
+  } catch {
+    // best effort
+  }
+
+  await log("info", "switchToGameMode: launching steam in game mode", {
+    appId,
+  });
+  try {
+    const steam = new Deno.Command("steam", {
+      args: ["-steamos3", "-gamepadui"],
+      stdout: "null",
+      stderr: "null",
     }).spawn();
-    const status = await p.status;
-    await log("info", "switchToGameMode: result", {
-      exitCode: status.code,
-      success: status.code === 0,
+
+    // Give Game Mode a moment to come up
+    await new Promise((r) => setTimeout(r, 5000));
+
+    await log("info", "switchToGameMode: triggering app launch", { appId });
+    const launch = new Deno.Command("steam", {
+      args: [`steam://rungameid/${appId}`],
+      stdout: "null",
+      stderr: "null",
+    }).spawn();
+    const launchStatus = await launch.status;
+    await log("info", "switchToGameMode: launch result", {
+      exitCode: launchStatus.code,
+      success: launchStatus.code === 0,
     });
-    return status.code === 0;
+
+    // Detach — don't wait for steam process, let it keep running
+    steam.unref();
+
+    return { switched: true, appId };
   } catch (e) {
     await log("error", "switchToGameMode: exception", { error: String(e) });
-    return false;
+    return { switched: false, appId };
   }
 }
 
@@ -348,17 +390,17 @@ export async function ensureSteamDeckIntegration(
 
   const appDir = exePath.substring(0, exePath.lastIndexOf("/"));
   await log("info", "ensureSteamDeckIntegration: appDir", { appDir });
-  const added = await addSteamShortcut(
+  const shortcutKey = await addSteamShortcut(
     APP_NAME,
     exePath,
     iconPath,
     appDir,
   );
   await log("info", "ensureSteamDeckIntegration: addSteamShortcut result", {
-    added,
+    shortcutKey,
   });
 
-  if (!added) {
+  if (shortcutKey === null) {
     await log(
       "info",
       "ensureSteamDeckIntegration: shortcut not added, stopping",
@@ -370,6 +412,9 @@ export async function ensureSteamDeckIntegration(
       needsRelaunch: false,
     };
   }
+
+  const appId = computeAppId(APP_NAME);
+  await log("info", "ensureSteamDeckIntegration: appId computed", { appId });
 
   const gameMode = isInGameMode();
   const launchedBySteam = isLaunchedBySteam();
@@ -391,15 +436,15 @@ export async function ensureSteamDeckIntegration(
     };
   }
 
-  const switched = await switchToGameMode();
+  const switchResult = await switchToGameMode(appId);
   await log("info", "ensureSteamDeckIntegration: switchToGameMode result", {
-    switched,
+    switched: switchResult.switched,
   });
   return {
     added: true,
-    switched,
-    switchFailed: !switched,
-    needsRelaunch: switched,
+    switched: switchResult.switched,
+    switchFailed: !switchResult.switched,
+    needsRelaunch: switchResult.switched,
   };
 }
 

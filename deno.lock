@@ -6,6 +6,7 @@
     "npm:buffer@^6.0.3": "6.0.3",
     "npm:node-bsdiff@*": "0.2.1",
     "npm:node-bsdiff@~0.2.1": "0.2.1",
+    "npm:polycrc@0.1.0": "0.1.0",
     "npm:steam-binary-vdf@0.1": "0.1.0"
   },
   "jsr": {
@@ -98,6 +99,7 @@
       "jsr:@std/jsonc@^1.0.2",
       "npm:buffer@^6.0.3",
       "npm:node-bsdiff@~0.2.1",
+      "npm:polycrc@0.1.0",
       "npm:steam-binary-vdf@0.1"
     ]
   }

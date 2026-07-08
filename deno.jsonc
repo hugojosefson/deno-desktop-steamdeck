@@ -3,8 +3,8 @@
   "tasks": {
     "gen-env": "deno run --allow-read --allow-write --allow-env scripts/build-env.ts",
     "set-secrets": "deno run --allow-read --allow-run scripts/set-secrets.ts",
-    "build": "deno task gen-env && rm -rf dist/ && deno desktop --allow-net --allow-run=steamosctl --allow-env --allow-write --allow-read main.ts",
-    "release": "deno run --allow-read --allow-write --allow-env --allow-run=steamosctl,tar,deno --allow-net --allow-ffi scripts/release.ts",
+    "build": "deno task gen-env && rm -rf dist/ && deno desktop --allow-net --allow-run=steamosctl,steam,pkill --allow-env --allow-write --allow-read main.ts",
+    "release": "deno run --allow-read --allow-write --allow-env --allow-run=steamosctl,tar,deno,steam,pkill --allow-net --allow-ffi scripts/release.ts",
     "all": "deno task gen-env && deno fmt --check && deno lint && deno check"
   },
   "desktop": {
@@ -30,6 +30,7 @@
     "@std/jsonc": "jsr:@std/jsonc@^1.0.2",
     "buffer": "npm:buffer@^6.0.3",
     "node-bsdiff": "npm:node-bsdiff@^0.2.1",
+    "polycrc": "npm:polycrc@0.1.0",
     "steam-binary-vdf": "npm:steam-binary-vdf@^0.1.0"
   }
 }
