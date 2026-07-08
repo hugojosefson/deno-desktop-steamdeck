@@ -4,17 +4,19 @@
 
 Complete workflow for every change:
 
-1. **Pull and rebase**: `git pull --rebase origin main` before any work
+1. **Pull and rebase with tags**: `git pull --rebase origin main` and
+   `git fetch origin --prune` before any work
 2. **Validate**: run `deno task all` before every commit
 3. **Commit**: `git add . && git commit -m "type: message"` (use conventional
    commits)
 4. **Tag**: do a fresh `git pull --rebase origin main` to check for new tags
-   from origin, then create tag with next semver version using
+   from origin (use `git fetch origin --prune` to actually fetch them), then
+   create tag with next semver version using
    `git tag -a vX.Y.Z -m "tag message"` (never delete tags)
 5. **Push**: `git push origin main --tags`
 6. **Handle rejections**: if push fails, run `git pull --rebase origin main`,
-   check if a new tag was received from origin, and create a new tag if needed
-   before retrying push
+   check if a new tag was received from origin (`git fetch origin --prune`), and
+   create a new tag if needed before retrying push
 
 ## Deno permissions
 
@@ -33,7 +35,8 @@ Complete workflow for every change:
 - Never delete tags - create next tag instead
 - If a local tag disagrees with origin (e.g., created by a failed partial push),
   origin wins: delete the local tag with `git tag -d vX.Y.Z`, then
-  `git pull --rebase origin main` to fetch the correct tag from origin
+  `git pull --rebase origin main` to fetch the correct tag from origin (use
+  `git fetch origin --prune` to ensure you actually get the remote tags)
 
 ## Agent maintenance
 
