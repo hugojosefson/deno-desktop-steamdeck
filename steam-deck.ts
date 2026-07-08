@@ -204,6 +204,7 @@ async function switchToGameMode(): Promise<boolean> {
 interface SteamDeckResult {
   added: boolean;
   switched: boolean;
+  switchFailed: boolean;
   needsRelaunch: boolean;
 }
 
@@ -212,11 +213,12 @@ export async function ensureSteamDeckIntegration(
   iconPath: string | null,
 ): Promise<SteamDeckResult> {
   if (!(await isSteamOS())) {
-    return { added: false, switched: false, needsRelaunch: false };
-  }
-
-  if (isInGameMode() || isLaunchedBySteam()) {
-    return { added: false, switched: false, needsRelaunch: false };
+    return {
+      added: false,
+      switched: false,
+      switchFailed: false,
+      needsRelaunch: false,
+    };
   }
 
   const appDir = exePath.substring(0, exePath.lastIndexOf("/"));
@@ -228,13 +230,28 @@ export async function ensureSteamDeckIntegration(
   );
 
   if (!added) {
-    return { added: false, switched: false, needsRelaunch: false };
+    return {
+      added: false,
+      switched: false,
+      switchFailed: false,
+      needsRelaunch: false,
+    };
+  }
+
+  if (isInGameMode() || isLaunchedBySteam()) {
+    return {
+      added: true,
+      switched: false,
+      switchFailed: false,
+      needsRelaunch: false,
+    };
   }
 
   const switched = await switchToGameMode();
   return {
-    added,
+    added: true,
     switched,
+    switchFailed: !switched,
     needsRelaunch: switched,
   };
 }

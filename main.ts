@@ -21,7 +21,7 @@ try {
 
   if (result.needsRelaunch) {
     shouldSkipMainServer = true;
-  } else if (result.added && !result.switched) {
+  } else if (result.switchFailed) {
     const popupHtml = `<!DOCTYPE html>
 <html>
 <head>
