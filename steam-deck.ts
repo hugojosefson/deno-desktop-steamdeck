@@ -22,7 +22,15 @@ async function isSteamOS(): Promise<boolean> {
 }
 
 function isInGameMode(): boolean {
-  return Deno.env.get("XDG_CURRENT_DESKTOP") === "gamescope";
+  if (Deno.env.get("XDG_CURRENT_DESKTOP") === "gamescope") return true;
+  if (Deno.env.get("SteamAppId") || Deno.env.get("SteamGameId")) return true;
+  if (Deno.env.get("GAMESCOPE_VERSION")) return true;
+  return false;
+}
+
+function isLaunchedBySteam(): boolean {
+  return !!(Deno.env.get("SteamAppId") || Deno.env.get("SteamGameId") ||
+    Deno.env.get("STEAM_RUNTIME"));
 }
 
 function findSteamDir(): string | null {
@@ -207,7 +215,7 @@ export async function ensureSteamDeckIntegration(
     return { added: false, switched: false, needsRelaunch: false };
   }
 
-  if (isInGameMode()) {
+  if (isInGameMode() || isLaunchedBySteam()) {
     return { added: false, switched: false, needsRelaunch: false };
   }
 
@@ -231,4 +239,4 @@ export async function ensureSteamDeckIntegration(
   };
 }
 
-export { isInGameMode, isSteamOS };
+export { isInGameMode, isLaunchedBySteam, isSteamOS };
