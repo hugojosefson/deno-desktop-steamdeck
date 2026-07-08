@@ -50,10 +50,7 @@ async function initSteamDeck(): Promise<boolean> {
   return false;
 }
 
-if (await initSteamDeck()) {
-  // Wait for server to finish (it won't until killed)
-  await new Promise(() => {});
-}
+const shouldSkipMainServer = await initSteamDeck();
 
 function cmpVer(a: string, b: string): number {
   const pa = a.split(".").map(Number);
@@ -68,25 +65,26 @@ function cmpVer(a: string, b: string): number {
 const RELEASE_BASE =
   "https://raw.githubusercontent.com/hugojosefson/deno-desktop-steamdeck/main/release/";
 
-Deno.serve(async (req) => {
-  const url = new URL(req.url);
+if (!shouldSkipMainServer) {
+  Deno.serve(async (req) => {
+    const url = new URL(req.url);
 
-  if (url.pathname === "/check-update") {
-    try {
-      const res = await fetch(RELEASE_BASE + "latest.json");
-      const manifest = await res.json();
-      const hasUpdate = cmpVer(manifest.version, appVersion) > 0;
-      return Response.json({
-        status: hasUpdate ? "available" : "uptodate",
-        version: manifest.version,
-      });
-    } catch (e) {
-      return Response.json({ status: "error", message: String(e) });
+    if (url.pathname === "/check-update") {
+      try {
+        const res = await fetch(RELEASE_BASE + "latest.json");
+        const manifest = await res.json();
+        const hasUpdate = cmpVer(manifest.version, appVersion) > 0;
+        return Response.json({
+          status: hasUpdate ? "available" : "uptodate",
+          version: manifest.version,
+        });
+      } catch (e) {
+        return Response.json({ status: "error", message: String(e) });
+      }
     }
-  }
 
-  return new Response(
-    `<!DOCTYPE html>
+    return new Response(
+      `<!DOCTYPE html>
 <html>
 <head>
 <title>Hello Steam Deck</title>
@@ -128,6 +126,7 @@ Deno.serve(async (req) => {
 </div>
 </body>
 </html>`,
-    { headers: { "content-type": "text/html" } },
-  );
-});
+      { headers: { "content-type": "text/html" } },
+    );
+  });
+}
