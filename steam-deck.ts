@@ -336,8 +336,25 @@ async function switchToGameMode(
       stderr: "null",
     }).spawn();
 
-    // Give Game Mode a moment to come up
-    await new Promise((r) => setTimeout(r, 5000));
+    // Wait until steam starts listening (port 27036/27037 = gamepadui)
+    const deadline = Date.now() + 30_000;
+    let ready = false;
+    while (Date.now() < deadline) {
+      try {
+        const tcp = Deno.readTextFileSync("/proc/net/tcp");
+        if (tcp.includes("000069A8") || tcp.includes("000069A9")) {
+          ready = true;
+          break;
+        }
+      } catch {
+        // /proc/net/tcp may not be available
+      }
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    await log("info", "switchToGameMode: steam ready check", {
+      ready,
+      waitedMs: 30_000 - (deadline - Date.now()),
+    });
 
     await log("info", "switchToGameMode: triggering app launch", { appId });
     const launch = new Deno.Command("steam", {
