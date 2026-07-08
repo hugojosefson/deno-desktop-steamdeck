@@ -24,6 +24,8 @@
     }
   },
   "imports": {
-    "@std/jsonc": "jsr:@std/jsonc@^1.0.2"
+    "@std/jsonc": "jsr:@std/jsonc@^1.0.2",
+    "buffer": "npm:buffer@^6.0.3",
+    "steam-binary-vdf": "npm:steam-binary-vdf@^0.1.0"
   }
 }

@@ -4,6 +4,51 @@ const appVersion = Deno.desktopVersion || "0.0.0";
 // @ts-ignore Deno Desktop API
 Deno.autoUpdate({ interval: 60 * 60 * 1000 });
 
+import { ensureSteamDeckIntegration } from "./steam-deck.ts";
+
+const exePath = Deno.execPath();
+const appDir = exePath.substring(0, exePath.lastIndexOf("/"));
+const iconPath = `${appDir}/icons/512.png`;
+
+async function initSteamDeck(): Promise<void> {
+  const result = await ensureSteamDeckIntegration(exePath, iconPath);
+
+  if (result.needsRelaunch) {
+    Deno.exit(0);
+  }
+
+  if (result.added && !result.switched) {
+    const popupHtml = `<!DOCTYPE html>
+<html>
+<head>
+<title>Hello Steam Deck</title>
+<style>
+  body{margin:0;height:100vh;display:grid;place-items:center;background:#111;color:#eee;font-family:system-ui,sans-serif;text-align:center}
+  h1{font-size:2rem;margin:0}
+  p{font-size:1rem;color:#888;max-width:400px}
+  button{font-size:1rem;padding:.5em 1em;background:#333;color:#eee;border:1px solid #555;border-radius:4px;cursor:pointer;margin-top:1rem}
+  button:hover{background:#444}
+</style>
+<script>
+  addEventListener("keydown",e=>{if(e.key==="Escape")window.close()});
+</script>
+</head>
+<body>
+<div>
+  <h1>Added to Steam</h1>
+  <p>This app has been added to Steam as a non-Steam game. Please press the Steam button to switch to game mode, then find "Hello Steam Deck" in your library.</p>
+  <button onclick="window.close()">Close</button>
+</div>
+</body>
+</html>`;
+    Deno.serve(() =>
+      new Response(popupHtml, { headers: { "content-type": "text/html" } })
+    );
+  }
+}
+
+initSteamDeck();
+
 function cmpVer(a: string, b: string): number {
   const pa = a.split(".").map(Number);
   const pb = b.split(".").map(Number);
