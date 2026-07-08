@@ -31,6 +31,9 @@ Complete workflow for every change:
 - Minor version (Y): new features
 - Patch version (Z): bug fixes
 - Never delete tags - create next tag instead
+- If a local tag disagrees with origin (e.g., created by a failed partial push),
+  origin wins: delete the local tag with `git tag -d vX.Y.Z`, then
+  `git pull --rebase origin main` to fetch the correct tag from origin
 
 ## Agent maintenance
 
