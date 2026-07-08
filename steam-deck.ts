@@ -331,6 +331,8 @@ async function switchToGameMode(
       args: [
         "-steamos3",
         "-gamepadui",
+        "-no-startup-window",
+        "--",
         `steam://rungameid/${appId}`,
       ],
       stdout: "null",

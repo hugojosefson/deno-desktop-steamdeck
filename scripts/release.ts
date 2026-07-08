@@ -68,7 +68,7 @@ async function main() {
     args: [
       "desktop",
       "--allow-net",
-      "--allow-run=steamosctl",
+      "--allow-run=steamosctl,steam,pkill",
       "--allow-env",
       "--allow-write",
       "--allow-read",
