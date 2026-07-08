@@ -85,8 +85,10 @@ Files NOT to commit (local-only build artifacts):
 
 ## Token and tool efficiency
 
-- Use `gh run view <id> --json status,conclusion` (single line JSON) instead of
-  `gh run watch` to avoid verbose loop output
+- Use `gh run watch --exit-status` to wait for CI to finish, filtering out the
+  verbose per-job lines:
+  `gh run watch --exit-status 2>&1 | rg -v '^\*|^\s|^$|(Set up|Post |Run actions|Run denoland|Verify|Create)'`
+  This keeps only the completion/error summary lines.
 - Prefer one-shot checks over polling loops
 - Batch independent operations into parallel tool calls
 
