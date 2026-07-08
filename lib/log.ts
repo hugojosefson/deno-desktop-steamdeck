@@ -1,8 +1,9 @@
 const URL = Deno.env.get("OPENOBSERVE_URL");
 const USER = Deno.env.get("OPENOBSERVE_USER");
 const PASSWORD = Deno.env.get("OPENOBSERVE_PASSWORD");
+const TOKEN = Deno.env.get("OPENOBSERVE_TOKEN");
 
-const enabled = !!(URL && USER && PASSWORD);
+const enabled = !!(URL && (TOKEN || (USER && PASSWORD)));
 
 function fallback(level: string, message: string, data: unknown) {
   if (level === "error") {
@@ -30,13 +31,17 @@ export async function log(
   };
 
   try {
-    const auth = btoa(`${USER}:${PASSWORD}`);
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (TOKEN) {
+      headers.Authorization = `Bearer ${TOKEN}`;
+    } else {
+      headers.Authorization = `Basic ${btoa(`${USER}:${PASSWORD}`)}`;
+    }
     const res = await fetch(`${URL}/api/default/default/_json`, {
       method: "POST",
-      headers: {
-        Authorization: `Basic ${auth}`,
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(body),
     });
     if (!res.ok) {
