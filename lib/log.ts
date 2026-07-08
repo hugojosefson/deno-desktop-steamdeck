@@ -1,9 +1,9 @@
-const URL = Deno.env.get("OPENOBSERVE_URL");
-const USER = Deno.env.get("OPENOBSERVE_USER");
-const PASSWORD = Deno.env.get("OPENOBSERVE_PASSWORD");
-const TOKEN = Deno.env.get("OPENOBSERVE_TOKEN");
+import { OPENOBSERVE_TOKEN, OPENOBSERVE_URL } from "../generated/env.ts";
 
-const enabled = !!(URL && (TOKEN || (USER && PASSWORD)));
+const URL = OPENOBSERVE_URL;
+const TOKEN = OPENOBSERVE_TOKEN;
+
+const enabled = !!(URL && TOKEN);
 
 function fallback(level: string, message: string, data: unknown) {
   if (level === "error") {
@@ -34,11 +34,7 @@ export async function log(
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
-    if (TOKEN) {
-      headers.Authorization = `Bearer ${TOKEN}`;
-    } else {
-      headers.Authorization = `Basic ${btoa(`${USER}:${PASSWORD}`)}`;
-    }
+    headers.Authorization = `Bearer ${TOKEN}`;
     const res = await fetch(`${URL}/api/default/default/_json`, {
       method: "POST",
       headers,

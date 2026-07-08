@@ -9,4 +9,6 @@
 deno-desktop-steamdeck*
 *.desktop
 .downloaded
+.env
+/generated/
 
