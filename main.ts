@@ -2,12 +2,62 @@ import { ensureSteamDeckIntegration } from "./steam-deck.ts";
 import { log, logError, setupGlobalErrorHandlers } from "./lib/log.ts";
 import { OPENOBSERVE_TOKEN, OPENOBSERVE_URL } from "./generated/env.ts";
 
-setupGlobalErrorHandlers();
+function cmpVer(a: string, b: string): number {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    if (pa[i] > pb[i]) return 1;
+    if (pa[i] < pb[i]) return -1;
+  }
+  return 0;
+}
+
+const RELEASE_BASE =
+  "https://raw.githubusercontent.com/hugojosefson/deno-desktop-steamdeck/main/release/";
 
 // @ts-ignore Deno Desktop API
 const appVersion = Deno.desktopVersion || "0.0.0";
 
-console.error(`[main] appVersion=${appVersion}`);
+// Show spinner/loader immediately, before any async work
+let pageHtml = `<!DOCTYPE html>
+<html>
+<head>
+<title>Hello Steam Deck</title>
+<style>
+  body{margin:0;height:100vh;display:grid;place-items:center;background:#111;color:#eee;font-family:system-ui,sans-serif;text-align:center}
+  .sp{width:40px;height:40px;border:4px solid #333;border-top:4px solid #888;border-radius:50%;animation:s 1s linear infinite;margin:0 auto 1rem}
+  @keyframes s{to{transform:rotate(360deg)}}
+  p{color:#666;font-size:.9rem}
+</style>
+</head>
+<body><div><div class="sp"></div><p id="s">Starting...</p></div></body>
+</html>`;
+
+Deno.serve(async (req) => {
+  const url = new URL(req.url);
+
+  if (url.pathname === "/check-update") {
+    console.error(`[main] /check-update request`);
+    try {
+      const res = await fetch(RELEASE_BASE + "latest.json");
+      const manifest = await res.json();
+      const hasUpdate = cmpVer(manifest.version, appVersion) > 0;
+      return Response.json({
+        status: hasUpdate ? "available" : "uptodate",
+        version: manifest.version,
+      });
+    } catch (e) {
+      return Response.json({ status: "error", message: String(e) });
+    }
+  }
+
+  return new Response(pageHtml, { headers: { "content-type": "text/html" } });
+});
+
+console.error(`[main] server started, appVersion=${appVersion}`);
+
+setupGlobalErrorHandlers();
+
 console.error(`[main] os=${Deno.build.os} arch=${Deno.build.arch}`);
 console.error(`[main] denoVersion=${Deno.version.deno}`);
 try {
@@ -54,8 +104,6 @@ try {
   }
 } catch { /* skip */ }
 
-let shouldSkipMainServer = false;
-
 await log("info", "app starting", { version: appVersion });
 console.error("[main] initial log sent");
 
@@ -68,6 +116,8 @@ try {
   console.error(`[main] Deno.autoUpdate failed: ${e}`);
   logError("autoUpdate failed", e);
 }
+
+let shouldSkipMainServer = false;
 
 try {
   console.error("[main] getting execPath");
@@ -100,10 +150,27 @@ try {
   console.error("[main] logged result");
 
   if (result.needsRelaunch) {
-    console.error("[main] needsRelaunch=true, skipping main server");
+    console.error(
+      "[main] needsRelaunch=true, exiting for game mode switch",
+    );
+    pageHtml = `<!DOCTYPE html>
+<html>
+<head>
+<title>Hello Steam Deck</title>
+<style>
+  body{margin:0;height:100vh;display:grid;place-items:center;background:#111;color:#eee;font-family:system-ui,sans-serif;text-align:center}
+  .sp{width:40px;height:40px;border:4px solid #333;border-top:4px solid #888;border-radius:50%;animation:s 1s linear infinite;margin:0 auto 1rem}
+  @keyframes s{to{transform:rotate(360deg)}}
+  p{color:#888;font-size:1rem}
+</style>
+</head>
+<body><div><div class="sp"></div><p>Switching to game mode...</p></div></body>
+</html>`;
     shouldSkipMainServer = true;
+    // Don't hold process open — game mode switch is underway
+    setTimeout(() => Deno.exit(0), 2000);
   } else if (result.switchFailed) {
-    const popupHtml = `<!DOCTYPE html>
+    pageHtml = `<!DOCTYPE html>
 <html>
 <head>
 <title>Hello Steam Deck</title>
@@ -126,11 +193,7 @@ try {
 </div>
 </body>
 </html>`;
-    console.error("[main] starting popup server (switch failed)");
-    Deno.serve(() =>
-      new Response(popupHtml, { headers: { "content-type": "text/html" } })
-    );
-    console.error("[main] popup server started");
+    console.error("[main] switch failed, showing popup");
     shouldSkipMainServer = true;
   }
 } catch (e) {
@@ -139,49 +202,10 @@ try {
   logError("Steam Deck integration failed", e);
 }
 
-function cmpVer(a: string, b: string): number {
-  const pa = a.split(".").map(Number);
-  const pb = b.split(".").map(Number);
-  for (let i = 0; i < 3; i++) {
-    if (pa[i] > pb[i]) return 1;
-    if (pa[i] < pb[i]) return -1;
-  }
-  return 0;
-}
-
-const RELEASE_BASE =
-  "https://raw.githubusercontent.com/hugojosefson/deno-desktop-steamdeck/main/release/";
-
 console.error(`[main] shouldSkipMainServer=${shouldSkipMainServer}`);
 if (!shouldSkipMainServer) {
-  console.error("[main] starting main Deno.serve");
-  Deno.serve(async (req) => {
-    console.error(`[main] request: ${req.method} ${req.url}`);
-    const url = new URL(req.url);
-
-    if (url.pathname === "/check-update") {
-      console.error("[main] /check-update request");
-      try {
-        const res = await fetch(RELEASE_BASE + "latest.json");
-        console.error(`[main] /check-update fetch status: ${res.status}`);
-        const manifest = await res.json();
-        console.error(
-          `[main] /check-update manifest: ${JSON.stringify(manifest)}`,
-        );
-        const hasUpdate = cmpVer(manifest.version, appVersion) > 0;
-        console.error(`[main] /check-update hasUpdate=${hasUpdate}`);
-        return Response.json({
-          status: hasUpdate ? "available" : "uptodate",
-          version: manifest.version,
-        });
-      } catch (e) {
-        console.error(`[main] /check-update error: ${e}`);
-        return Response.json({ status: "error", message: String(e) });
-      }
-    }
-
-    return new Response(
-      `<!DOCTYPE html>
+  console.error("[main] updating pageHtml to real UI");
+  pageHtml = `<!DOCTYPE html>
 <html>
 <head>
 <title>Hello Steam Deck</title>
@@ -270,8 +294,6 @@ if (!shouldSkipMainServer) {
   <p id="version"></p>
 </div>
 </body>
-</html>`,
-      { headers: { "content-type": "text/html" } },
-    );
-  });
+</html>`;
+  console.error("[main] pageHtml updated to real UI");
 }
