@@ -30,10 +30,29 @@ for (
     "DISPLAY",
     "WAYLAND_DISPLAY",
     "XDG_SESSION_TYPE",
+    "APPIMAGE",
+    "ARGV0",
+    "APPDIR",
+    "DESKTOPINTEGRATION_APPIMAGE",
+    "DESKTOPINTEGRATION_ORIGINAL_ARGV0",
   ]
 ) {
   console.error(`[main] env.${key}=${Deno.env.get(key) ?? "(unset)"}`);
 }
+try {
+  const allEnv = Deno.env.toObject();
+  for (const key of Object.keys(allEnv).sort()) {
+    if (
+      key.includes("APPIMAGE") || key.includes("ARGV") ||
+      key.includes("STEAM") || key.includes("GAMESCOPE") ||
+      key.includes("DESKTOP")
+    ) continue;
+    const val = allEnv[key];
+    if (val.length > 0 && val.length < 200) {
+      console.error(`[main] allenv.${key}=${val}`);
+    }
+  }
+} catch { /* skip */ }
 
 let shouldSkipMainServer = false;
 
@@ -52,7 +71,9 @@ try {
 
 try {
   console.error("[main] getting execPath");
-  const exePath = Deno.execPath();
+  const appImagePath = Deno.env.get("APPIMAGE");
+  const exePath = appImagePath || Deno.execPath();
+  console.error(`[main] APPIMAGE env=${appImagePath ?? "(unset)"}`);
   console.error(`[main] exePath=${exePath}`);
   const appDir = exePath.substring(0, exePath.lastIndexOf("/"));
   const iconPath = `${appDir}/icons/512.png`;
