@@ -16,6 +16,9 @@ jobs:
       - uses: denoland/setup-deno@v2
 
       - name: Build AppImage
+        env:
+          OPENOBSERVE_URL: ${{ secrets.OPENOBSERVE_URL }}
+          OPENOBSERVE_TOKEN: ${{ secrets.OPENOBSERVE_TOKEN }}
         run: deno task build
 
       - name: Verify artifact

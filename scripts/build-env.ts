@@ -1,17 +1,30 @@
-const envPath = `${import.meta.dirname}/../.env`;
-const text = await Deno.readTextFile(envPath);
-
-const lines = text.split("\n")
-  .map((l) => l.trim())
-  .filter((l) => l && !l.startsWith("#"));
-
+const keys = ["OPENOBSERVE_URL", "OPENOBSERVE_TOKEN"];
 const entries: string[] = [];
-for (const line of lines) {
-  const eq = line.indexOf("=");
-  if (eq === -1) continue;
-  const key = line.slice(0, eq).trim();
-  const val = line.slice(eq + 1).trim();
-  entries.push(`export const ${key} = ${JSON.stringify(val)};`);
+
+for (const key of keys) {
+  let val: string | undefined;
+
+  try {
+    const envPath = `${import.meta.dirname}/../.env`;
+    const text = await Deno.readTextFile(envPath);
+    for (const line of text.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eq = trimmed.indexOf("=");
+      if (eq === -1) continue;
+      if (trimmed.slice(0, eq).trim() === key) {
+        val = trimmed.slice(eq + 1).trim();
+        break;
+      }
+    }
+  } catch {
+    // .env file not found, try env vars instead
+    val = Deno.env.get(key);
+  }
+
+  if (val) {
+    entries.push(`export const ${key} = ${JSON.stringify(val)};`);
+  }
 }
 
 const out = `// Auto-generated from .env — do not edit

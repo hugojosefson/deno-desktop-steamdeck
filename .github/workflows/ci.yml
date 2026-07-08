@@ -12,6 +12,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2
-      - run: deno fmt --check
-      - run: deno lint
-      - run: deno check main.ts
+      - name: Check
+        env:
+          OPENOBSERVE_URL: ${{ secrets.OPENOBSERVE_URL }}
+          OPENOBSERVE_TOKEN: ${{ secrets.OPENOBSERVE_TOKEN }}
+        run: deno task all
