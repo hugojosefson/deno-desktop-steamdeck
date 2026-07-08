@@ -3,7 +3,7 @@
   "tasks": {
     "gen-env": "deno run --allow-read --allow-write --allow-env scripts/build-env.ts",
     "set-secrets": "deno run --allow-read --allow-run scripts/set-secrets.ts",
-    "build": "deno task gen-env && rm -rf dist/ && deno desktop --allow-net --allow-run=steamosctl --allow-env --allow-write --allow-read --backend=$(deno eval 'import{parse}from \"@std/jsonc\";console.log(parse(Deno.readTextFileSync(\"deno.jsonc\")).desktop.backend)') --output ./dist/hello.AppImage main.ts && rm -rf ./dist/hello && mv ./dist/hello.AppImage ./dist/hello",
+    "build": "deno task gen-env && rm -rf dist/ && deno desktop --allow-net --allow-run=steamosctl --allow-env --allow-write --allow-read main.ts",
     "release": "deno run --allow-read --allow-write --allow-env --allow-run --allow-net --allow-ffi scripts/release.ts",
     "all": "deno task gen-env && deno fmt --check && deno lint && deno check"
   },
@@ -23,7 +23,7 @@
       "linux": "./dist/hello"
     },
     "release": {
-      "baseUrl": "https://raw.githubusercontent.com/hugojosefson/deno-desktop-steamdeck/main/release/"
+      "baseUrl": "https://github.com/hugojosefson/deno-desktop-steamdeck/releases/latest/download/"
     }
   },
   "imports": {

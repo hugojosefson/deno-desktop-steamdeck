@@ -5,30 +5,48 @@ controller support.
 
 ## Quick start (on Steam Deck)
 
+Run the following in desktop mode. It will install the app and automatically add
+it to Steam as a non-Steam game for game mode.
+
 ```sh
-curl -sL https://github.com/hugojosefson/deno-desktop-steamdeck/releases/latest/download/hello -o hello
-chmod +x hello
-./hello
+mkdir -p ~/hello-steamdeck
+curl -sL https://github.com/hugojosefson/deno-desktop-steamdeck/releases/latest/download/hello.tar.gz | tar xz -C ~/hello-steamdeck
+~/hello-steamdeck/hello
 ```
 
-To add as a non-Steam game in game mode: add `./hello` as a non-Steam game via
-the Steam client.
+After installation, the app is available in game mode under the name **Hello
+Steam Deck**.
 
 ## Usage (development)
 
 ```sh
-# Build AppImage for Steam Deck
+# Build directory to dist/hello/
 deno task build
 
 # Format, lint, check
 deno task all
 ```
 
+## Release
+
+```sh
+# From a previous release's tag, build and patch
+PREV_VERSION=<previous-version> deno task release
+```
+
+Creates `dist/hello.tar.gz`, `dist/latest.json`, and `dist/patch-*.bin`. Upload
+these as GitHub release assets.
+
 ## Auto-update
 
-The app checks for updates on startup and hourly via `Deno.autoUpdate()`. The
-release manifest lives in [release/latest.json](release/latest.json). New
-releases publish AppImages to GitHub Releases.
+The app checks for updates on startup and hourly via `Deno.autoUpdate()`.
+Release manifests and patches are served from GitHub release assets at
+`releases/latest/download/`.
+
+The runtime dylib (`.so`) is patched in-place via bsdiff. Sentinel files
+(`<dylib>.update`, `<dylib>.backup`, `<dylib>.update-ok`) track staged updates
+and rollback state. Since the app builds to a directory (not an AppImage), the
+dylib is in a writable location and auto-update works correctly.
 
 ## Requirements
 

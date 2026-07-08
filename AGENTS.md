@@ -9,10 +9,10 @@ Complete workflow for every change:
 2. **Bump version**: update `version` in `deno.jsonc` to match planned tag (e.g.
    `0.3.19` for `v0.3.19`)
 3. **Release build**: run `PREV_VERSION=<previous> deno task release` to build
-   the AppImage, generate a bsdiff patch from the previous version's runtime
-   dylib, and update `release/latest.json`. The previous version is the
+   the app to `dist/hello/`, generate a bsdiff patch, package `hello.tar.gz`,
+   and write `dist/latest.json`. The previous version is the
    `Deno.desktopVersion` value baked into the last release (e.g. `0.3.18`). The
-   previous runtime dylib must be present at `release/libdenort.so`.
+   previous release's `hello.tar.gz` is downloaded from GitHub release assets.
 4. **Validate**: run `deno task all` before every commit
 5. **Commit**: `git add . && git commit -m "type: message"` (use conventional
    commits)
@@ -26,18 +26,16 @@ Complete workflow for every change:
    create a new tag if needed before retrying push
 
 After pushing a `v*` tag, the **release.yml** GitHub Actions workflow
-automatically rebuilds the AppImage in CI, bumps the `version` in
-`release/latest.json` while preserving patches, commits that bump to `main`, and
-creates a GitHub Release with the AppImage artifact.
+automatically runs `deno task release`, then creates a GitHub Release with the
+build artifacts (`hello.tar.gz`, `latest.json`, `patch-*.bin`) attached.
 
 ### GitHub Actions workflows
 
 There are CI/CD workflows in `.github/workflows/`:
 
-- **release.yml** — triggers on `v*` tag push; builds the AppImage via
-  `deno task build`, bumps the `version` field in `release/latest.json` via
-  `deno eval` (preserving existing patches), commits the bump to `main`, and
-  creates a GitHub Release with the AppImage artifact.
+- **release.yml** — triggers on `v*` tag push; runs `deno task release` to build
+  and generate patches, then creates a GitHub Release with the build artifacts
+  (`hello.tar.gz`, `latest.json`, `patch-*.bin`) attached.
 - **ci.yml** — runs `deno task all` on non-`main` branches and PRs.
 
 Note: the glob tool may not find these files since they're inside a `.github/`
@@ -48,15 +46,18 @@ directory.
 Files to commit after a release:
 
 - `deno.jsonc` (bumped version)
-- `release/latest.json` (updated version + patch entry)
-- `release/patch-<old>-to-<new>.bin` (new patch)
 - `scripts/release.ts` (if changed)
 - `deno.lock` (if changed)
 
 Files NOT to commit (local-only build artifacts):
 
-- `release/libdenort.so` (85MB baseline dylib, kept locally for next patch)
 - `dist/` (build output, gitignored)
+
+### Release assets (uploaded by CI to GitHub Release)
+
+- `hello.tar.gz` — app directory contents packed (extracts to `./`)
+- `latest.json` — update manifest for `Deno.autoUpdate()`
+- `patch-<old>-to-<new>.bin` — bsdiff patch for the runtime dylib
 
 ## Deno permissions
 
@@ -77,14 +78,6 @@ Files NOT to commit (local-only build artifacts):
   origin wins: delete the local tag with `git tag -d vX.Y.Z`, then
   `git pull --rebase origin main` to fetch the correct tag from origin (use
   `git fetch origin --prune` to ensure you actually get the remote tags)
-
-## Future improvements
-
-- **Move patches to release assets**: bsdiff patches are currently stored in the
-  repo (`release/patch-*.bin`) and served via `raw.githubusercontent.com`.
-  Ideally they should be uploaded as GitHub Release assets and referenced by
-  download URL in `latest.json`, so they don't depend on files staying in the
-  repo. Implement once the auto-update system is verified working end-to-end.
 
 ## Agent maintenance
 

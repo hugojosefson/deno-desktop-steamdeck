@@ -12,8 +12,183 @@ function cmpVer(a: string, b: string): number {
   return 0;
 }
 
+interface SentinelCheck {
+  dir: string;
+  dylibName: string;
+  fullPath: string;
+  update: boolean;
+  backup: boolean;
+  ok: boolean;
+}
+
+interface UpdateState {
+  status:
+    | "uptodate"
+    | "update-available"
+    | "update-staged"
+    | "rollback-pending"
+    | "update-was-applied"
+    | "error";
+  restartBehavior: string;
+  message: string;
+}
+
+function parentDir(p: string): string {
+  const i = p.lastIndexOf("/");
+  return i >= 0 ? p.slice(0, i) : ".";
+}
+
+function listDirFiles(dir: string): string[] {
+  try {
+    const out: string[] = [];
+    for (const e of Deno.readDirSync(dir)) {
+      if (e.isFile) out.push(e.name);
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+function checkDylibSentinels(dylibPath: string): SentinelCheck | null {
+  // Rust logic: dylib_path.with_extension(format!("{}.update", ext))
+  // For libdenort.so: ext="so", with_extension("so.update") = libdenort.so.update
+  // That's equivalent to appending ".update" to the full path
+  const updatePath = dylibPath + ".update";
+  const backupPath = dylibPath + ".backup";
+  const okPath = dylibPath + ".update-ok";
+
+  let update = false,
+    backup = false,
+    ok = false;
+  try {
+    Deno.statSync(updatePath);
+    update = true;
+  } catch {
+    // file does not exist
+  }
+  try {
+    Deno.statSync(backupPath);
+    backup = true;
+  } catch {
+    // file does not exist
+  }
+  try {
+    Deno.statSync(okPath);
+    ok = true;
+  } catch {
+    // file does not exist
+  }
+
+  if (!update && !backup && !ok) return null;
+
+  const i = dylibPath.lastIndexOf("/");
+  const dir = i >= 0 ? dylibPath.slice(0, i) : ".";
+  const dylibName = i >= 0 ? dylibPath.slice(i + 1) : dylibPath;
+
+  return { dir, dylibName, fullPath: dylibPath, update, backup, ok };
+}
+
+function findLoadedDylibs(): string[] {
+  try {
+    const maps = Deno.readTextFileSync("/proc/self/maps");
+    const paths = new Set<string>();
+    for (const line of maps.split("\n")) {
+      const parts = line.trim().split(/\s+/);
+      // /proc/self/maps: addr perms offset dev inode pathname
+      if (parts.length >= 6 && parts[5]) {
+        const path = parts[5];
+        // Only .so and no extension (main binary) paths, not anonymous maps
+        if (
+          path.startsWith("/") &&
+          (path.endsWith(".so") || path.endsWith(".dylib"))
+        ) {
+          paths.add(path);
+        }
+      }
+    }
+    return [...paths];
+  } catch (e) {
+    console.error("[main] findLoadedDylibs failed:", e);
+    return [];
+  }
+}
+
+function deriveUpdateState(
+  currentVersion: string,
+  onlineVersion: string | null,
+  checks: SentinelCheck[],
+): UpdateState {
+  const onlineAvailable = onlineVersion !== null &&
+    cmpVer(onlineVersion, currentVersion) > 0;
+
+  // Find any dylib with sentinel files
+  const withUpdate = checks.filter((c) => c.update);
+  const withBackupNoOk = checks.filter((c) => c.backup && !c.ok);
+  const withBackupAndOk = checks.filter((c) => c.backup && c.ok);
+
+  // Update staged: .update exists (launcher will apply it on restart)
+  if (withUpdate.length > 0) {
+    const d = withUpdate[0];
+    return {
+      status: "update-staged",
+      restartBehavior: `Update will be applied on the next restart (${
+        onlineAvailable
+          ? `v${currentVersion} → v${onlineVersion}`
+          : "version unknown"
+      }).`,
+      message: onlineAvailable
+        ? `Update v${onlineVersion} staged! Will apply on restart.`
+        : `Update staged (${d.dir}/${d.dylibName}.update).`,
+      ...(onlineAvailable ? { onlineVersion } : {}),
+    };
+  }
+
+  // Rollback pending: .backup exists but no .update-ok
+  if (withBackupNoOk.length > 0) {
+    const d = withBackupNoOk[0];
+    return {
+      status: "rollback-pending",
+      restartBehavior:
+        `The last update failed to boot. On the next restart, the launcher will restore the previous dylib backup from ${d.dir}/${d.dylibName}.backup, rolling back to the version that was running before the failed update.`,
+      message:
+        `Last update failed! Will roll back on restart (backup at ${d.dir}/${d.dylibName}.backup).`,
+    };
+  }
+
+  // Update was applied and confirmed: .backup + .update-ok
+  if (withBackupAndOk.length > 0) {
+    const d = withBackupAndOk[0];
+    return {
+      status: "update-was-applied",
+      restartBehavior:
+        `A previous update was applied and booted successfully. On the next restart, the launcher will clean up the stale backup at ${d.dir}/${d.dylibName}.backup and the sentinel at ${d.dir}/${d.dylibName}.update-ok. No update action will be taken.`,
+      message:
+        `Update was applied and confirmed. Stale files will be cleaned up on next restart.`,
+    };
+  }
+
+  // No sentinel files — report online status
+  if (onlineAvailable) {
+    return {
+      status: "update-available",
+      restartBehavior:
+        `Version v${onlineVersion} is available online at ${RELEASE_BASE}latest.json, but no update has been downloaded yet. Deno.autoUpdate() will check periodically (every 60 min) and download the update when it fires. No filesystem change will happen on restart until the update is staged. To trigger a check now, restart the app.`,
+      message:
+        `Update v${onlineVersion} available. Not downloaded yet; restart app to trigger auto-update check.`,
+    };
+  }
+
+  return {
+    status: "uptodate",
+    restartBehavior:
+      "No sentinel files found and no newer version online. The app will run as-is on the next restart.",
+    message: "Up to date.",
+  };
+}
+
 const RELEASE_BASE =
-  "https://raw.githubusercontent.com/hugojosefson/deno-desktop-steamdeck/main/release/";
+  "https://github.com/hugojosefson/deno-desktop-steamdeck/releases/latest/download/";
 
 // @ts-ignore Deno Desktop API
 const appVersion = Deno.desktopVersion || "0.0.0";
@@ -54,15 +229,101 @@ Deno.serve(async (req) => {
   if (url.pathname === "/check-update") {
     console.error(`[main] /check-update request`);
     try {
-      const res = await fetch(RELEASE_BASE + "latest.json");
-      const manifest = await res.json();
-      const hasUpdate = cmpVer(manifest.version, appVersion) > 0;
+      const [manifest, dylibs] = await Promise.all([
+        fetch(RELEASE_BASE + "latest.json").then((r) => r.json()).catch(
+          () => null,
+        ),
+        findLoadedDylibs(),
+      ]);
+
+      const onlineVersion = manifest?.version ?? null;
+      const onlineAvailable = onlineVersion !== null &&
+        cmpVer(onlineVersion, appVersion) > 0;
+
+      // Check each loaded dylib for sentinel siblings
+      const sentinelResults = dylibs.map(checkDylibSentinels).filter(
+        (r): r is SentinelCheck => r !== null,
+      );
+
+      // Deduplicate by dir+dylibName
+      const seen = new Set<string>();
+      const sentinelChecks: SentinelCheck[] = [];
+      for (const r of sentinelResults) {
+        const key = r.dir + "/" + r.dylibName;
+        if (!seen.has(key)) {
+          seen.add(key);
+          sentinelChecks.push(r);
+        }
+      }
+
+      // Also check known directories directly
+      const knownDirs = new Set<string>();
+      for (const d of dylibs) knownDirs.add(parentDir(d));
+      try {
+        knownDirs.add(parentDir(Deno.execPath()));
+      } catch {
+        // Deno.execPath() not available
+      }
+      const appDir = Deno.env.get("APPDIR");
+      if (appDir) knownDirs.add(appDir);
+
+      for (const dir of knownDirs) {
+        const names = listDirFiles(dir);
+        for (const name of names) {
+          if (name.endsWith(".so") || name.endsWith(".dylib")) {
+            const r = checkDylibSentinels(dir + "/" + name);
+            if (r && !seen.has(dir + "/" + name)) {
+              seen.add(dir + "/" + name);
+              sentinelChecks.push(r);
+            }
+          }
+        }
+      }
+
+      // Derive combined state
+      const state = deriveUpdateState(
+        appVersion,
+        onlineVersion,
+        sentinelChecks,
+      );
+
+      await log("info", "check-update result", {
+        currentVersion: appVersion,
+        onlineVersion,
+        onlineAvailable,
+        sentinelFiles: sentinelChecks.map((s) => ({
+          dir: s.dir,
+          dylib: s.dylibName,
+          update: s.update,
+          backup: s.backup,
+          ok: s.ok,
+        })),
+        status: state.status,
+      });
+
       return Response.json({
-        status: hasUpdate ? "available" : "uptodate",
-        version: manifest.version,
+        status: state.status,
+        currentVersion: appVersion,
+        onlineVersion,
+        sentinel: sentinelChecks.length > 0
+          ? sentinelChecks.map((s) => ({
+            dir: s.dir,
+            dylib: s.dylibName,
+            updateExists: s.update,
+            backupExists: s.backup,
+            okExists: s.ok,
+          }))
+          : null,
+        restartBehavior: state.restartBehavior,
+        message: state.message,
       });
     } catch (e) {
-      return Response.json({ status: "error", message: String(e) });
+      console.error("[main] /check-update error:", e);
+      return Response.json({
+        status: "error",
+        message: String(e),
+        restartBehavior: "Unknown; failed to check update state.",
+      });
     }
   }
 
@@ -294,7 +555,17 @@ if (!shouldSkipMainServer) {
     s.textContent="Checking...";
     try{
       const r=await(await fetch("/check-update")).json();
-      s.textContent=r.status==="available"?"Update v"+r.version+" available! Restart to apply":r.status==="uptodate"?"Up to date":"Error: "+r.message;
+      const lines=[r.message||r.status];
+      if(r.restartBehavior&&r.restartBehavior!==r.message)lines.push("("+r.restartBehavior+")");
+      if(r.sentinel)for(const f of r.sentinel){
+        const parts=[];
+        if(f.updateExists)parts.push("update");
+        if(f.backupExists)parts.push("backup");
+        if(f.okExists)parts.push("ok");
+        if(parts.length)lines.push("["+f.dylib+"] "+parts.join("+"));
+      }
+      s.textContent=lines.join("\n");
+      s.style.whiteSpace="pre-wrap";
     }catch(e){s.textContent="Error: "+e.message}
   }
 </script>
