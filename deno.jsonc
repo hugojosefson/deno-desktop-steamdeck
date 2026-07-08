@@ -1,7 +1,7 @@
 {
   "version": "0.1.0",
   "tasks": {
-    "build": "rm -rf dist/ && deno desktop --allow-net --allow-run=steamosctl --allow-env --allow-write --backend=$(deno eval 'import{parse}from \"@std/jsonc\";console.log(parse(Deno.readTextFileSync(\"deno.jsonc\")).desktop.backend)') --output ./dist/hello.AppImage main.ts && rm -rf ./dist/hello && mv ./dist/hello.AppImage ./dist/hello",
+    "build": "rm -rf dist/ && deno desktop --allow-net --allow-run=steamosctl --allow-env --allow-write --allow-read --backend=$(deno eval 'import{parse}from \"@std/jsonc\";console.log(parse(Deno.readTextFileSync(\"deno.jsonc\")).desktop.backend)') --output ./dist/hello.AppImage main.ts && rm -rf ./dist/hello && mv ./dist/hello.AppImage ./dist/hello",
     "all": "deno fmt --check && deno lint && deno check"
   },
   "desktop": {
