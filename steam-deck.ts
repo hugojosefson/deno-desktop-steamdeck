@@ -71,17 +71,32 @@ function getNextShortcutIndex(shortcuts: Record<string, unknown>): string {
   return String(maxIdx + 1);
 }
 
-function shortcutAlreadyExists(
+function findShortcutByKey(
   shortcuts: Record<string, unknown>,
   exe: string,
-): boolean {
-  for (const entry of Object.values(shortcuts)) {
+): [string, Record<string, unknown>] | null {
+  for (const [key, entry] of Object.entries(shortcuts)) {
     if (typeof entry === "object" && entry !== null) {
       const s = entry as Record<string, unknown>;
-      if (s.exe === exe) return true;
+      if (s.exe === exe) return [key, s];
     }
   }
-  return false;
+  return null;
+}
+
+function shortcutNeedsUpdate(
+  shortcut: Record<string, unknown>,
+  appName: string,
+  exe: string,
+  icon: string | null,
+  startDir: string,
+): boolean {
+  return (
+    shortcut.AppName !== appName ||
+    shortcut.exe !== `"${exe}"` ||
+    shortcut.icon !== (icon ? `"${icon}"` : "") ||
+    shortcut.StartDir !== `"${startDir}"`
+  );
 }
 
 async function addSteamShortcut(
@@ -112,27 +127,47 @@ async function addSteamShortcut(
 
   const shortcuts = (data.shortcuts ??= {}) as Record<string, unknown>;
 
-  if (shortcutAlreadyExists(shortcuts, exePath)) {
-    return true;
+  const existing = findShortcutByKey(shortcuts, `"${exePath}"`);
+  if (existing !== null) {
+    const [key, shortcut] = existing;
+    if (!shortcutNeedsUpdate(shortcut, appName, exePath, iconPath, startDir)) {
+      return true;
+    }
+    shortcuts[key] = {
+      AppName: appName,
+      exe: `"${exePath}"`,
+      StartDir: `"${startDir}"`,
+      icon: iconPath ? `"${iconPath}"` : "",
+      ShortcutPath: "",
+      LaunchOptions: "",
+      IsHidden: 0,
+      AllowDesktopConfig: 1,
+      AllowOverlay: 1,
+      openvr: 0,
+      Devkit: 0,
+      DevkitGameID: "",
+      LastPlayTime: shortcut.LastPlayTime ?? 0,
+      tags: {},
+    };
+  } else {
+    const idx = getNextShortcutIndex(shortcuts);
+    shortcuts[idx] = {
+      AppName: appName,
+      exe: `"${exePath}"`,
+      StartDir: `"${startDir}"`,
+      icon: iconPath ? `"${iconPath}"` : "",
+      ShortcutPath: "",
+      LaunchOptions: "",
+      IsHidden: 0,
+      AllowDesktopConfig: 1,
+      AllowOverlay: 1,
+      openvr: 0,
+      Devkit: 0,
+      DevkitGameID: "",
+      LastPlayTime: 0,
+      tags: {},
+    };
   }
-
-  const idx = getNextShortcutIndex(shortcuts);
-  shortcuts[idx] = {
-    AppName: appName,
-    exe: `"${exePath}"`,
-    StartDir: `"${startDir}"`,
-    icon: iconPath ? `"${iconPath}"` : "",
-    ShortcutPath: "",
-    LaunchOptions: "",
-    IsHidden: 0,
-    AllowDesktopConfig: 1,
-    AllowOverlay: 1,
-    openvr: 0,
-    Devkit: 0,
-    DevkitGameID: "",
-    LastPlayTime: 0,
-    tags: {},
-  };
 
   try {
     await Deno.mkdir(configDir, { recursive: true });
