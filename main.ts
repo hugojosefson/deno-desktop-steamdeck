@@ -115,7 +115,7 @@ try {
   button:hover{background:#444}
 </style>
 <script>
-  addEventListener("keydown",e=>{if(e.key==="Escape")window.close()});
+  addEventListener("keydown",e=>{if(e.key==="Escape"||e.key==="b"||e.key==="B")window.close()});
 </script>
 </head>
 <body>
@@ -244,7 +244,7 @@ if (!shouldSkipMainServer) {
   #feedback{font-size:.9rem;color:#666;margin-top:1rem}
 </style>
 <script>
-  addEventListener("keydown",e=>{if(e.key==="Escape")window.close()});
+  addEventListener("keydown",e=>{if(e.key==="Escape"||e.key==="b"||e.key==="B")window.close()});
   addEventListener("gamepadconnected",()=>{document.getElementById("feedback").textContent="Controller connected"});
   const v=document.getElementById("version");
   if(v)v.textContent="${"v" + appVersion}";
