@@ -10,8 +10,9 @@ Complete workflow for every change:
    commits)
 4. **Tag**: `git tag -a vX.Y.Z -m "tag message"` (use semver, never delete tags)
 5. **Push**: `git push origin main --tags`
-6. **Handle rejections**: if push fails, run `git pull --rebase origin main`
-   then retry push
+6. **Handle rejections**: if push fails, run `git pull --rebase origin main`,
+   check if a new tag was received from origin, and create a new tag if needed
+   before retrying push
 
 ## Deno permissions
 
