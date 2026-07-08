@@ -23,7 +23,7 @@
       "linux": "./dist/hello"
     },
     "release": {
-      "baseUrl": "https://github.com/hugojosefson/deno-desktop-steamdeck/releases/latest/download/"
+      "baseUrl": "https://raw.githubusercontent.com/hugojosefson/deno-desktop-steamdeck/main/"
     }
   },
   "imports": {

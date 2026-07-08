@@ -36,6 +36,5 @@ jobs:
         with:
           files: |
             dist/hello.tar.gz
-            dist/latest.json
             dist/patch-*.bin
           generate_release_notes: true

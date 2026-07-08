@@ -188,7 +188,7 @@ function deriveUpdateState(
 }
 
 const RELEASE_BASE =
-  "https://github.com/hugojosefson/deno-desktop-steamdeck/releases/latest/download/";
+  "https://raw.githubusercontent.com/hugojosefson/deno-desktop-steamdeck/main/";
 
 // @ts-ignore Deno Desktop API
 const appVersion = Deno.desktopVersion || "0.0.0";
@@ -230,12 +230,10 @@ Deno.serve(async (req) => {
     console.error(`[main] /check-update request`);
     try {
       const [manifest, dylibs] = await Promise.all([
-        fetch(RELEASE_BASE + "latest.json").then((r) => r.json()).catch(
-          () => null,
-        ),
+        fetch(RELEASE_BASE + "latest.json")
+          .then((r) => r.json()).catch(() => null),
         findLoadedDylibs(),
       ]);
-
       const onlineVersion = manifest?.version ?? null;
       const onlineAvailable = onlineVersion !== null &&
         cmpVer(onlineVersion, appVersion) > 0;

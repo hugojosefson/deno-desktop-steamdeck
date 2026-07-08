@@ -27,7 +27,7 @@ Complete workflow for every change:
 
 After pushing a `v*` tag, the **release.yml** GitHub Actions workflow
 automatically runs `deno task release`, then creates a GitHub Release with the
-build artifacts (`hello.tar.gz`, `latest.json`, `patch-*.bin`) attached.
+build artifacts (`hello.tar.gz`, `patch-*.bin`) attached.
 
 ### GitHub Actions workflows
 
@@ -35,7 +35,7 @@ There are CI/CD workflows in `.github/workflows/`:
 
 - **release.yml** — triggers on `v*` tag push; runs `deno task release` to build
   and generate patches, then creates a GitHub Release with the build artifacts
-  (`hello.tar.gz`, `latest.json`, `patch-*.bin`) attached.
+  (`hello.tar.gz`, `patch-*.bin`) attached.
 - **ci.yml** — runs `deno task all` on non-`main` branches and PRs.
 
 Note: the glob tool may not find these files since they're inside a `.github/`
@@ -46,6 +46,7 @@ directory.
 Files to commit after a release:
 
 - `deno.jsonc` (bumped version)
+- `latest.json` (update manifest, always)
 - `scripts/release.ts` (if changed)
 - `deno.lock` (if changed)
 
@@ -56,7 +57,6 @@ Files NOT to commit (local-only build artifacts):
 ### Release assets (uploaded by CI to GitHub Release)
 
 - `hello.tar.gz` — app directory contents packed (extracts to `./`)
-- `latest.json` — update manifest for `Deno.autoUpdate()`
 - `patch-<old>-to-<new>.bin` — bsdiff patch for the runtime dylib
 
 ## Deno permissions
@@ -82,6 +82,43 @@ Files NOT to commit (local-only build artifacts):
 ## Agent maintenance
 
 - Write new rules, conventions, and learnings to AGENTS.md as they arise
+
+## OpenObserve log querying
+
+To check incoming logs in OpenObserve:
+
+```bash
+cd /surviving-data/code/current/i/deno-desktop-steamdeck
+source <(rg '^OPENOBSERVE_' .env.admin | sed 's/^/export /')
+python3 -c "
+import urllib.request, json, base64, time
+url = 'https://openobserve.hugojosefson.net'
+email = '${OPENOBSERVE_USER}'
+token = '${OPENOBSERVE_SEARCH_TOKEN}'
+auth = base64.b64encode(f'{email}:{token}'.encode()).decode()
+req = urllib.request.Request(url + '/api/default/_search', method='POST')
+req.add_header('Content-Type', 'application/json')
+req.add_header('Authorization', 'Basic ' + auth)
+req.data = json.dumps({
+    'query': {
+        'sql': 'select * from \"default\" order by timestamp desc limit 20',
+        'start_time': 1700000000000000,
+        'end_time': int(time.time() * 1000000),
+    }
+}).encode()
+resp = urllib.request.urlopen(req)
+for h in json.loads(resp.read().decode()).get('hits', []):
+    ts = h.get('timestamp', ''); msg = h.get('message', '')
+    print(f'{ts} | {msg}'[:300])
+"
+```
+
+To filter by level/message:
+
+```python
+'sql': 'select * from \"default\" where level=\\'error\\' order by timestamp desc limit 20',
+'sql': 'select * from \"default\" where message=\\'check-update result\\' order by timestamp desc limit 20',
+```
 
 ## Token and tool efficiency
 

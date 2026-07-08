@@ -148,16 +148,14 @@ async function main() {
     console.error("release: no PREV_VERSION, skipping patch");
   }
 
-  // Write latest.json
+  // Write latest.json to repo root (for raw.github.com)
   const latestJson = { version, patches };
-  await Deno.writeTextFile(
-    `${DIST_DIR}/latest.json`,
-    JSON.stringify(latestJson, null, 2) + "\n",
-  );
+  const latestContent = JSON.stringify(latestJson, null, 2) + "\n";
+  await Deno.writeTextFile(`${ROOT}/latest.json`, latestContent);
   console.error(`release: wrote latest.json → version ${version}`);
 
   // Summary of release assets
-  const assets = [`${DIST_DIR}/hello.tar.gz`, `${DIST_DIR}/latest.json`];
+  const assets = [`${DIST_DIR}/hello.tar.gz`, `${ROOT}/latest.json`];
   for (const [fromVer] of Object.entries(patches)) {
     assets.push(`${DIST_DIR}/patch-${fromVer}-to-${version}.bin`);
   }
