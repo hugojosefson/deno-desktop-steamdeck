@@ -1,5 +1,5 @@
 {
-  "version": "0.3.22",
+  "version": "0.3.23",
   "tasks": {
     "gen-env": "deno run --allow-read --allow-write --allow-env scripts/build-env.ts",
     "set-secrets": "deno run --allow-read --allow-run scripts/set-secrets.ts",
