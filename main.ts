@@ -1,15 +1,20 @@
+import { ensureSteamDeckIntegration } from "./steam-deck.ts";
+import { log, logError, setupGlobalErrorHandlers } from "./lib/log.ts";
+
+setupGlobalErrorHandlers();
+
 // @ts-ignore Deno Desktop API
 const appVersion = Deno.desktopVersion || "0.0.0";
 
-import { ensureSteamDeckIntegration } from "./steam-deck.ts";
-
 let shouldSkipMainServer = false;
+
+await log("info", "app starting", { version: appVersion });
 
 try {
   // @ts-ignore Deno Desktop API
   Deno.autoUpdate({ interval: 60 * 60 * 1000 });
 } catch (e) {
-  console.error("autoUpdate failed:", e);
+  logError("autoUpdate failed", e);
 }
 
 try {
@@ -17,7 +22,19 @@ try {
   const appDir = exePath.substring(0, exePath.lastIndexOf("/"));
   const iconPath = `${appDir}/icons/512.png`;
 
+  await log("info", "starting steam deck integration", {
+    exePath,
+    appDir,
+    iconPath,
+  });
+
   const result = await ensureSteamDeckIntegration(exePath, iconPath);
+
+  await log(
+    "info",
+    "steam deck integration result",
+    result as unknown as Record<string, unknown>,
+  );
 
   if (result.needsRelaunch) {
     shouldSkipMainServer = true;
@@ -51,7 +68,7 @@ try {
     shouldSkipMainServer = true;
   }
 } catch (e) {
-  console.error("Steam Deck integration failed:", e);
+  logError("Steam Deck integration failed", e);
 }
 
 function cmpVer(a: string, b: string): number {
