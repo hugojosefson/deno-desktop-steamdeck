@@ -1,41 +1,90 @@
 import { Buffer } from "buffer";
 import { readVdf, writeVdf } from "steam-binary-vdf";
+import { log } from "./lib/log.ts";
 
 const APP_NAME = "Hello Steam Deck";
 
 function isLinux(): boolean {
-  return Deno.build.os === "linux";
+  const result = Deno.build.os === "linux";
+  console.error(`[steam-deck] isLinux: ${result} (os=${Deno.build.os})`);
+  return result;
 }
 
 async function commandExists(cmd: string): Promise<boolean> {
   try {
+    console.error(`[steam-deck] commandExists: checking "${cmd}"`);
     const p = new Deno.Command(cmd, { args: ["--version"] }).spawn();
     const status = await p.status;
-    return status.code === 0;
-  } catch {
+    const result = status.code === 0;
+    console.error(
+      `[steam-deck] commandExists: "${cmd}" => ${result} (exit code ${status.code})`,
+    );
+    return result;
+  } catch (e) {
+    console.error(
+      `[steam-deck] commandExists: "${cmd}" => false (exception: ${e})`,
+    );
     return false;
   }
 }
 
 async function isSteamOS(): Promise<boolean> {
-  return isLinux() && (await commandExists("steamosctl"));
+  const linux = isLinux();
+  const exists = linux ? await commandExists("steamosctl") : false;
+  console.error(
+    `[steam-deck] isSteamOS: linux=${linux} steamosctl=${exists} => ${
+      linux && exists
+    }`,
+  );
+  return linux && exists;
 }
 
 function isInGameMode(): boolean {
-  if (Deno.env.get("XDG_CURRENT_DESKTOP") === "gamescope") return true;
-  if (Deno.env.get("SteamAppId") || Deno.env.get("SteamGameId")) return true;
-  if (Deno.env.get("GAMESCOPE_VERSION")) return true;
+  const xdg = Deno.env.get("XDG_CURRENT_DESKTOP");
+  const steamAppId = Deno.env.get("SteamAppId");
+  const steamGameId = Deno.env.get("SteamGameId");
+  const gamescopeVer = Deno.env.get("GAMESCOPE_VERSION");
+  console.error(
+    `[steam-deck] isInGameMode: XDG_CURRENT_DESKTOP=${xdg} SteamAppId=${steamAppId} SteamGameId=${steamGameId} GAMESCOPE_VERSION=${gamescopeVer}`,
+  );
+  if (xdg === "gamescope") {
+    console.error(
+      `[steam-deck] isInGameMode: true (XDG_CURRENT_DESKTOP === gamescope)`,
+    );
+    return true;
+  }
+  if (steamAppId || steamGameId) {
+    console.error(
+      `[steam-deck] isInGameMode: true (SteamAppId/SteamGameId set)`,
+    );
+    return true;
+  }
+  if (gamescopeVer) {
+    console.error(`[steam-deck] isInGameMode: true (GAMESCOPE_VERSION set)`);
+    return true;
+  }
+  console.error(`[steam-deck] isInGameMode: false`);
   return false;
 }
 
 function isLaunchedBySteam(): boolean {
-  return !!(Deno.env.get("SteamAppId") || Deno.env.get("SteamGameId") ||
-    Deno.env.get("STEAM_RUNTIME"));
+  const steamAppId = Deno.env.get("SteamAppId");
+  const steamGameId = Deno.env.get("SteamGameId");
+  const steamRuntime = Deno.env.get("STEAM_RUNTIME");
+  const result = !!(steamAppId || steamGameId || steamRuntime);
+  console.error(
+    `[steam-deck] isLaunchedBySteam: SteamAppId=${steamAppId} SteamGameId=${steamGameId} STEAM_RUNTIME=${steamRuntime} => ${result}`,
+  );
+  return result;
 }
 
 function findSteamDir(): string | null {
   const home = Deno.env.get("HOME");
-  if (!home) return null;
+  console.error(`[steam-deck] findSteamDir: HOME=${home}`);
+  if (!home) {
+    console.error(`[steam-deck] findSteamDir: null (no HOME)`);
+    return null;
+  }
 
   const candidates = [
     `${home}/.local/share/Steam`,
@@ -46,26 +95,40 @@ function findSteamDir(): string | null {
   for (const dir of candidates) {
     try {
       const info = Deno.statSync(dir);
-      if (info.isDirectory) return dir;
-    } catch {
-      // continue
+      console.error(
+        `[steam-deck] findSteamDir: checking ${dir} => isDirectory=${info.isDirectory}`,
+      );
+      if (info.isDirectory) {
+        console.error(`[steam-deck] findSteamDir: found ${dir}`);
+        return dir;
+      }
+    } catch (e) {
+      console.error(`[steam-deck] findSteamDir: checking ${dir} => error ${e}`);
     }
   }
 
+  console.error(`[steam-deck] findSteamDir: null (no candidates matched)`);
   return null;
 }
 
 function findSteamUserId(steamDir: string): string | null {
   const userdataDir = `${steamDir}/userdata`;
+  console.error(`[steam-deck] findSteamUserId: scanning ${userdataDir}`);
   try {
     for (const entry of Deno.readDirSync(userdataDir)) {
-      if (entry.isDirectory && /^\d+$/.test(entry.name)) {
+      const isMatch = entry.isDirectory && /^\d+$/.test(entry.name);
+      console.error(
+        `[steam-deck] findSteamUserId: entry=${entry.name} isDir=${entry.isDirectory} match=${isMatch}`,
+      );
+      if (isMatch) {
+        console.error(`[steam-deck] findSteamUserId: found ${entry.name}`);
         return entry.name;
       }
     }
-  } catch {
-    // continue
+  } catch (e) {
+    console.error(`[steam-deck] findSteamUserId: error ${e}`);
   }
+  console.error(`[steam-deck] findSteamUserId: null`);
   return null;
 }
 
@@ -113,14 +176,29 @@ async function addSteamShortcut(
   iconPath: string | null,
   startDir: string,
 ): Promise<boolean> {
+  await log("info", "addSteamShortcut: start", {
+    appName,
+    exePath,
+    iconPath,
+    startDir,
+  });
   const steamDir = findSteamDir();
-  if (!steamDir) return false;
+  await log("info", "addSteamShortcut: steamDir", { steamDir });
+  if (!steamDir) {
+    await log("info", "addSteamShortcut: false (no steam dir)");
+    return false;
+  }
 
   const userId = findSteamUserId(steamDir);
-  if (!userId) return false;
+  await log("info", "addSteamShortcut: userId", { userId });
+  if (!userId) {
+    await log("info", "addSteamShortcut: false (no userId)");
+    return false;
+  }
 
   const vdfPath = getShortcutsVdfPath(steamDir, userId);
   const configDir = `${steamDir}/userdata/${userId}/config`;
+  await log("info", "addSteamShortcut: paths", { vdfPath, configDir });
 
   let data: Record<string, unknown>;
 
@@ -129,16 +207,44 @@ async function addSteamShortcut(
     const buf = Buffer.from(raw);
     // @ts-ignore Buffer type compatibility with npm package
     data = readVdf(buf) as Record<string, unknown>;
-  } catch {
+    await log("info", "addSteamShortcut: read existing vdf", {
+      keys: Object.keys(data),
+    });
+  } catch (e) {
+    await log("info", "addSteamShortcut: no existing vdf, starting fresh", {
+      error: String(e),
+    });
     data = { shortcuts: {} };
   }
 
   const shortcuts = (data.shortcuts ??= {}) as Record<string, unknown>;
+  await log("info", "addSteamShortcut: shortcuts count", {
+    count: Object.keys(shortcuts).length,
+  });
 
   const existing = findShortcutByKey(shortcuts, `"${exePath}"`);
+  await log("info", "addSteamShortcut: existing shortcut", {
+    found: existing !== null,
+  });
   if (existing !== null) {
     const [key, shortcut] = existing;
-    if (!shortcutNeedsUpdate(shortcut, appName, exePath, iconPath, startDir)) {
+    const needsUpdate = shortcutNeedsUpdate(
+      shortcut,
+      appName,
+      exePath,
+      iconPath,
+      startDir,
+    );
+    await log("info", "addSteamShortcut: shortcutNeedsUpdate", {
+      key,
+      needsUpdate,
+      currentAppName: shortcut.AppName,
+      currentExe: shortcut.exe,
+      currentIcon: shortcut.icon,
+      currentStartDir: shortcut.StartDir,
+    });
+    if (!needsUpdate) {
+      await log("info", "addSteamShortcut: shortcut up to date");
       return true;
     }
     shortcuts[key] = {
@@ -157,8 +263,10 @@ async function addSteamShortcut(
       LastPlayTime: shortcut.LastPlayTime ?? 0,
       tags: {},
     };
+    await log("info", "addSteamShortcut: updated existing shortcut", { key });
   } else {
     const idx = getNextShortcutIndex(shortcuts);
+    await log("info", "addSteamShortcut: creating new shortcut", { idx });
     shortcuts[idx] = {
       AppName: appName,
       exe: `"${exePath}"`,
@@ -179,24 +287,34 @@ async function addSteamShortcut(
 
   try {
     await Deno.mkdir(configDir, { recursive: true });
-  } catch {
-    // continue
+    await log("info", "addSteamShortcut: ensured config dir");
+  } catch (e) {
+    await log("info", "addSteamShortcut: mkdir error (non-fatal)", {
+      error: String(e),
+    });
   }
 
   // @ts-ignore VdfMap type compatibility
   const outBuf = writeVdf(data);
   await Deno.writeFile(vdfPath, outBuf);
+  await log("info", "addSteamShortcut: wrote vdf, returning true");
   return true;
 }
 
 async function switchToGameMode(): Promise<boolean> {
+  await log("info", "switchToGameMode: calling steamosctl switch-to-game-mode");
   try {
     const p = new Deno.Command("steamosctl", {
       args: ["switch-to-game-mode"],
     }).spawn();
     const status = await p.status;
+    await log("info", "switchToGameMode: result", {
+      exitCode: status.code,
+      success: status.code === 0,
+    });
     return status.code === 0;
-  } catch {
+  } catch (e) {
+    await log("error", "switchToGameMode: exception", { error: String(e) });
     return false;
   }
 }
@@ -212,7 +330,14 @@ export async function ensureSteamDeckIntegration(
   exePath: string,
   iconPath: string | null,
 ): Promise<SteamDeckResult> {
-  if (!(await isSteamOS())) {
+  await log("info", "ensureSteamDeckIntegration: start", { exePath, iconPath });
+
+  const steamOs = await isSteamOS();
+  await log("info", "ensureSteamDeckIntegration: isSteamOS", {
+    result: steamOs,
+  });
+  if (!steamOs) {
+    await log("info", "ensureSteamDeckIntegration: not SteamOS, skipping");
     return {
       added: false,
       switched: false,
@@ -222,14 +347,22 @@ export async function ensureSteamDeckIntegration(
   }
 
   const appDir = exePath.substring(0, exePath.lastIndexOf("/"));
+  await log("info", "ensureSteamDeckIntegration: appDir", { appDir });
   const added = await addSteamShortcut(
     APP_NAME,
     exePath,
     iconPath,
     appDir,
   );
+  await log("info", "ensureSteamDeckIntegration: addSteamShortcut result", {
+    added,
+  });
 
   if (!added) {
+    await log(
+      "info",
+      "ensureSteamDeckIntegration: shortcut not added, stopping",
+    );
     return {
       added: false,
       switched: false,
@@ -238,7 +371,18 @@ export async function ensureSteamDeckIntegration(
     };
   }
 
-  if (isInGameMode() || isLaunchedBySteam()) {
+  const gameMode = isInGameMode();
+  const launchedBySteam = isLaunchedBySteam();
+  await log("info", "ensureSteamDeckIntegration: mode check", {
+    gameMode,
+    launchedBySteam,
+  });
+
+  if (gameMode || launchedBySteam) {
+    await log(
+      "info",
+      "ensureSteamDeckIntegration: already in game mode or launched by steam, no switch needed",
+    );
     return {
       added: true,
       switched: false,
@@ -248,6 +392,9 @@ export async function ensureSteamDeckIntegration(
   }
 
   const switched = await switchToGameMode();
+  await log("info", "ensureSteamDeckIntegration: switchToGameMode result", {
+    switched,
+  });
   return {
     added: true,
     switched,

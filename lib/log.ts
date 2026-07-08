@@ -4,6 +4,11 @@ const URL = OPENOBSERVE_URL;
 const TOKEN = OPENOBSERVE_TOKEN;
 
 const enabled = !!(URL && TOKEN);
+console.error(
+  `[log] init: enabled=${enabled} url=${URL ? "set" : "unset"} token=${
+    TOKEN ? "set" : "unset"
+  }`,
+);
 
 function fallback(level: string, message: string, data: unknown) {
   if (level === "error") {
@@ -34,11 +39,11 @@ export async function log(
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
-    headers.Authorization = `Bearer ${TOKEN}`;
+    headers.Authorization = `Basic ${btoa(`:${TOKEN}`)}`;
     const res = await fetch(`${URL}/api/default/default/_json`, {
       method: "POST",
       headers,
-      body: JSON.stringify(body),
+      body: JSON.stringify([body]),
     });
     if (!res.ok) {
       console.error(
@@ -64,6 +69,48 @@ export async function logError(
       : String(error),
   });
 }
+
+async function sendToOpenObserve(
+  level: string,
+  msg: string,
+): Promise<void> {
+  if (!enabled) return;
+  try {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    headers.Authorization = `Basic ${btoa(`:${TOKEN}`)}`;
+    const body = {
+      timestamp: new Date().toISOString(),
+      level,
+      message: msg,
+    };
+    await fetch(`${URL}/api/default/default/_json`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify([body]),
+    });
+  } catch {
+    // silently ignore — don't recurse
+  }
+}
+
+const origLog = console.log.bind(console);
+const origWarn = console.warn.bind(console);
+const origError = console.error.bind(console);
+
+console.log = (...args: unknown[]) => {
+  origLog(...args);
+  sendToOpenObserve("info", args.map((a) => String(a)).join(" "));
+};
+console.warn = (...args: unknown[]) => {
+  origWarn(...args);
+  sendToOpenObserve("warn", args.map((a) => String(a)).join(" "));
+};
+console.error = (...args: unknown[]) => {
+  origError(...args);
+  sendToOpenObserve("error", args.map((a) => String(a)).join(" "));
+};
 
 export function setupGlobalErrorHandlers(): void {
   self.addEventListener("error", (event) => {
