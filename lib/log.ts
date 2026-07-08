@@ -1,9 +1,8 @@
-const BASE_URL = Deno.env.get("OPENOBSERVE_URL") ||
-  "https://openobserve.hugojosefson.net";
-const USER = Deno.env.get("OPENOBSERVE_USER") || "admin@hugojosefson.net";
+const URL = Deno.env.get("OPENOBSERVE_URL");
+const USER = Deno.env.get("OPENOBSERVE_USER");
 const PASSWORD = Deno.env.get("OPENOBSERVE_PASSWORD");
 
-const enabled = !!PASSWORD;
+const enabled = !!(URL && USER && PASSWORD);
 
 function fallback(level: string, message: string, data: unknown) {
   if (level === "error") {
@@ -32,7 +31,7 @@ export async function log(
 
   try {
     const auth = btoa(`${USER}:${PASSWORD}`);
-    const res = await fetch(`${BASE_URL}/api/default/default/_json`, {
+    const res = await fetch(`${URL}/api/default/default/_json`, {
       method: "POST",
       headers: {
         Authorization: `Basic ${auth}`,
