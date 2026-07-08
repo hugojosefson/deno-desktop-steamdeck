@@ -18,8 +18,9 @@ const RELEASE_BASE =
 // @ts-ignore Deno Desktop API
 const appVersion = Deno.desktopVersion || "0.0.0";
 
-// Show spinner/loader immediately, before any async work
-let pageHtml = `<!DOCTYPE html>
+// Adopt the implicit startup window and show a spinner via data: URI
+// before the HTTP server is even ready — avoids white screen
+const spinnerHtml = `<!DOCTYPE html>
 <html>
 <head>
 <title>Hello Steam Deck</title>
@@ -32,6 +33,20 @@ let pageHtml = `<!DOCTYPE html>
 </head>
 <body><div><div class="sp"></div><p id="s">Starting...</p></div></body>
 </html>`;
+let win: { navigate: (url: string) => void } | null = null;
+try {
+  // @ts-ignore Deno Desktop API
+  win = new Deno.BrowserWindow({ title: "Hello Steam Deck" });
+  win!.navigate("data:text/html;base64," + btoa(spinnerHtml));
+  console.error("[main] window showing spinner via data: URI");
+} catch {
+  console.error(
+    "[main] Deno.BrowserWindow not available, server-based fallback",
+  );
+}
+
+// Show spinner/loader immediately, before any async work
+let pageHtml = spinnerHtml;
 
 Deno.serve(async (req) => {
   const url = new URL(req.url);
@@ -296,4 +311,15 @@ if (!shouldSkipMainServer) {
 </body>
 </html>`;
   console.error("[main] pageHtml updated to real UI");
+  // Navigate the data: URI window back to the HTTP server for the real UI
+  if (win) {
+    try {
+      const addr = Deno.env.get("DENO_SERVE_ADDRESS") || "tcp:127.0.0.1:8000";
+      const port = addr.split(":").pop();
+      win.navigate(`http://127.0.0.1:${port}/`);
+      console.error(`[main] navigated window to http://127.0.0.1:${port}/`);
+    } catch (e) {
+      console.error("[main] window navigate failed:", e);
+    }
+  }
 }
