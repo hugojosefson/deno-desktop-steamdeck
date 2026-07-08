@@ -314,18 +314,6 @@ async function addSteamShortcut(
 async function switchToGameMode(
   appId: number,
 ): Promise<{ switched: boolean; appId: number }> {
-  await log("info", "switchToGameMode: stopping steam clients", { appId });
-  try {
-    await new Deno.Command("pkill", {
-      args: ["-f", "steamwebhelper"],
-    }).spawn().status.catch(() => {});
-    await new Deno.Command("pkill", {
-      args: ["-f", "steam"],
-    }).spawn().status.catch(() => {});
-  } catch {
-    // best effort
-  }
-
   await log("info", "switchToGameMode: launching steam in game mode", {
     appId,
   });
