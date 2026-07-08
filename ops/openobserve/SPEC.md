@@ -9,14 +9,15 @@ Deck app to POST logs to for debugging.
 - TLS + reverse proxy already set up for `*.hugojosefson.net` pointing to this
   host (not part of this spec)
 
-## docker-compose.yml
+## Directory and file
 
-Place this at `/srv/openobserve/docker-compose.yml`:
+Place this at `/appdata/openobserve/docker-compose.yml`:
 
 ```yaml
 services:
   openobserve:
-    image: openobserve/openobserve:latest
+    container_name: openobserve
+    image: docker.io/openobserve/openobserve:latest
     restart: unless-stopped
     ports:
       - "80:5080"
@@ -24,23 +25,13 @@ services:
       ZO_ROOT_USER_EMAIL: admin@hugojosefson.net
       ZO_ROOT_USER_PASSWORD: changeme
     volumes:
-      - ./data:/data
-```
-
-## Data directory
-
-All data lives under bind-mounted `./data/`:
-
-```
-/srv/openobserve/
-├── docker-compose.yml
-└── data/
+      - /appdata/openobserve/data:/data
 ```
 
 ## Start
 
 ```bash
-cd /srv/openobserve
+cd /appdata/openobserve
 docker compose up -d
 ```
 
